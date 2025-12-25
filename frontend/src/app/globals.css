@@ -1,0 +1,250 @@
+@import "tailwindcss";
+
+/* ============================================
+   Ment MCP Platform - Design System
+   Monochromatic Green Theme
+   Clean & Organized Layout
+   ============================================ */
+
+:root {
+  /* Background Colors - Very Pale Mint */
+  --bg-primary: #EEF6EE;
+  --bg-secondary: #D0E7D0;
+  --bg-light: #F5FAF5;
+  --bg-accent: #E0F0E0;
+  --bg-white: #FFFFFF;
+
+  /* Element Colors - Soft Sage & Grass Greens */
+  --primary: #75B875;
+  --primary-dark: #57A857;
+  --primary-light: #8FC98F;
+  --primary-hover: #67A667;
+
+  /* Details & Text - Deep Forest & Dark Moss */
+  --text-primary: #2E592E;
+  --text-secondary: #3D6B3D;
+  --text-dark: #182F18;
+  --text-muted: #5A8A5A;
+
+  /* Borders & Shadows */
+  --border-light: #C5DFC5;
+  --border-medium: #A3CFA3;
+  --shadow-sm: 0 2px 8px rgba(46, 89, 46, 0.06);
+  --shadow-md: 0 4px 16px rgba(46, 89, 46, 0.08);
+  --shadow-lg: 0 8px 32px rgba(46, 89, 46, 0.1);
+
+  /* Spacing */
+  --max-width: 1140px;
+  --section-gap: 6rem;
+}
+
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-inter);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* Typography - Clean & Readable */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-dark);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: 3rem;
+}
+
+h2 {
+  font-size: 2.25rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+h4 {
+  font-size: 1.125rem;
+}
+
+p {
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+/* Container - Centered & Padded */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Section - Generous Spacing */
+.section {
+  padding: var(--section-gap) 0;
+}
+
+/* Section Header - Consistent */
+.section-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.section-header h2 {
+  margin-bottom: 1rem;
+}
+
+.section-header p {
+  max-width: 600px;
+  margin: 0 auto;
+  font-size: 1.1rem;
+}
+
+/* Buttons - Clean & Prominent */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-dark);
+  border: 2px solid var(--border-medium);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-accent);
+  border-color: var(--primary);
+}
+
+/* Cards - Clean with Subtle Shadow */
+.card {
+  background: var(--bg-white);
+  border-radius: 1rem;
+  padding: 1.75rem;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-light);
+}
+
+/* Links */
+a {
+  color: var(--primary-dark);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary);
+}
+
+/* Grid Utilities */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h2 {
+    font-size: 2rem;
+  }
+
+  .section {
+    padding: 4rem 0;
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  .container {
+    padding: 0 1.25rem;
+  }
+
+  .section {
+    padding: 3rem 0;
+  }
+
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header {
+    margin-bottom: 2.5rem;
+  }
+}
