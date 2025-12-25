@@ -33,7 +33,7 @@ const features = [
 
 export default function Features() {
     return (
-        <section id="features" className="section bg-[var(--bg-white)]">
+        <section id="features" className="section bg-[var(--bg-darker)]">
             <div className="container">
                 <div className="section-header">
                     <h2>Everything You Need</h2>
@@ -44,8 +44,8 @@ export default function Features() {
                     {features.map((feature, index) => (
                         <div key={index} className="card text-center">
                             <div className="text-3xl mb-3">{feature.icon}</div>
-                            <h4 className="mb-2">{feature.title}</h4>
-                            <p className="text-sm">{feature.description}</p>
+                            <h4 className="mb-2 text-white">{feature.title}</h4>
+                            <p className="text-sm text-[var(--text-muted)]">{feature.description}</p>
                         </div>
                     ))}
                 </div>

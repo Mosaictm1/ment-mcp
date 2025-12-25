@@ -33,10 +33,10 @@ const plans = [
 
 export default function Pricing() {
     return (
-        <section id="pricing" className="section">
+        <section id="pricing" className="section bg-[var(--bg-dark)]">
             <div className="container">
                 <div className="section-header">
-                    <h2>Simple <span className="text-[var(--primary)]">Pricing</span></h2>
+                    <h2>Simple <span className="gradient-text">Pricing</span></h2>
                     <p>Start free, upgrade when you need more.</p>
                 </div>
 
@@ -44,19 +44,19 @@ export default function Pricing() {
                     {plans.map((plan, index) => (
                         <div
                             key={index}
-                            className={`card relative ${plan.popular ? "border-2 border-[var(--primary)]" : ""
+                            className={`card relative ${plan.popular ? "border-[var(--primary)]" : ""
                                 }`}
                         >
                             {plan.popular && (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[var(--primary)] text-white text-xs font-medium rounded-full">
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[var(--primary)] text-black text-xs font-medium rounded-full">
                                     Popular
                                 </div>
                             )}
 
                             <div className="text-center mb-5">
-                                <h3 className="text-lg mb-2">{plan.name}</h3>
+                                <h3 className="text-lg mb-2 text-white">{plan.name}</h3>
                                 <div className="flex items-baseline justify-center gap-1">
-                                    <span className="text-3xl font-bold text-[var(--text-dark)]">{plan.price}</span>
+                                    <span className="text-3xl font-bold text-white">{plan.price}</span>
                                     <span className="text-sm text-[var(--text-muted)]">{plan.period}</span>
                                 </div>
                             </div>
@@ -67,7 +67,7 @@ export default function Pricing() {
                                         <svg className="w-4 h-4 text-[var(--primary)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                         </svg>
-                                        <span className="text-[var(--text-secondary)]">{feature}</span>
+                                        <span className="text-[var(--text-muted)]">{feature}</span>
                                     </li>
                                 ))}
                             </ul>
