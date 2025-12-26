@@ -195,6 +195,7 @@ export async function userRoutes(app: FastifyInstance) {
         // Encrypt the n8n API key
         const apiKeyEncrypted = encrypt(apiKey);
 
+        // Create credential
         const credential = await prisma.n8nCredential.create({
             data: {
                 userId: request.user.id,
@@ -202,6 +203,29 @@ export async function userRoutes(app: FastifyInstance) {
                 instanceUrl: instanceUrl.replace(/\/$/, ''), // Remove trailing slash
                 apiKeyEncrypted,
                 status: 'pending',
+            },
+        });
+
+        // Auto-verify the connection
+        let status: 'verified' | 'failed' = 'failed';
+        try {
+            const n8nUrl = instanceUrl.replace(/\/$/, '');
+            const response = await fetch(`${n8nUrl}/api/v1/workflows?limit=1`, {
+                headers: {
+                    'X-N8N-API-KEY': apiKey,
+                },
+            });
+            status = response.ok ? 'verified' : 'failed';
+        } catch {
+            status = 'failed';
+        }
+
+        // Update status
+        const updated = await prisma.n8nCredential.update({
+            where: { id: credential.id },
+            data: {
+                status,
+                lastVerifiedAt: new Date(),
             },
             select: {
                 id: true,
@@ -212,7 +236,7 @@ export async function userRoutes(app: FastifyInstance) {
             },
         });
 
-        return reply.status(201).send(credential);
+        return reply.status(201).send(updated);
     });
 
     // ============================================

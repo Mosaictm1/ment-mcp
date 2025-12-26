@@ -1,12 +1,17 @@
 {
     "name": "n8n-mcp-backend",
     "version": "1.0.0",
+    "type": "module",
     "description": "Backend API for n8n MCP Platform",
     "main": "dist/index.js",
+    "engines": {
+        "node": ">=20.0.0"
+    },
     "scripts": {
         "dev": "tsx watch src/index.ts",
         "build": "tsc",
         "start": "node dist/index.js",
+        "postinstall": "prisma generate",
         "db:generate": "prisma generate",
         "db:push": "prisma db push",
         "db:migrate": "prisma migrate dev",

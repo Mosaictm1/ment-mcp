@@ -186,6 +186,62 @@ export async function n8nRoutes(app: FastifyInstance) {
     });
 
     // ============================================
+    // POST /n8n/workflows/:id/activate
+    // ============================================
+    app.post<{ Params: { id: string }; Querystring: { credentialId?: string } }>('/workflows/:id/activate', async (request, reply) => {
+        const n8n = await getN8nService(request.user.id, request.query.credentialId);
+
+        if (!n8n) {
+            return reply.status(400).send({
+                error: {
+                    code: 'NO_CREDENTIAL',
+                    message: 'No n8n credentials configured',
+                },
+            });
+        }
+
+        try {
+            const workflow = await n8n.activateWorkflow(request.params.id);
+            return reply.send(workflow);
+        } catch (error) {
+            return reply.status(502).send({
+                error: {
+                    code: 'N8N_ERROR',
+                    message: error instanceof Error ? error.message : 'Failed to activate workflow',
+                },
+            });
+        }
+    });
+
+    // ============================================
+    // POST /n8n/workflows/:id/deactivate
+    // ============================================
+    app.post<{ Params: { id: string }; Querystring: { credentialId?: string } }>('/workflows/:id/deactivate', async (request, reply) => {
+        const n8n = await getN8nService(request.user.id, request.query.credentialId);
+
+        if (!n8n) {
+            return reply.status(400).send({
+                error: {
+                    code: 'NO_CREDENTIAL',
+                    message: 'No n8n credentials configured',
+                },
+            });
+        }
+
+        try {
+            const workflow = await n8n.deactivateWorkflow(request.params.id);
+            return reply.send(workflow);
+        } catch (error) {
+            return reply.status(502).send({
+                error: {
+                    code: 'N8N_ERROR',
+                    message: error instanceof Error ? error.message : 'Failed to deactivate workflow',
+                },
+            });
+        }
+    });
+
+    // ============================================
     // GET /n8n/executions
     // ============================================
     app.get<{ Querystring: { workflowId?: string; limit?: string; credentialId?: string } }>('/executions', async (request, reply) => {

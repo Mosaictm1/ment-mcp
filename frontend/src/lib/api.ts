@@ -257,3 +257,58 @@ export async function getMcpTools() {
         }>;
     }>('/v1/mcp/tools');
 }
+
+// ============================================
+// WORKFLOW MANAGEMENT
+// ============================================
+
+export interface Workflow {
+    id: string;
+    name: string;
+    active: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    nodes?: unknown[];
+    connections?: unknown;
+}
+
+export interface Execution {
+    id: string;
+    workflowId: string;
+    finished: boolean;
+    mode: string;
+    startedAt: string;
+    stoppedAt?: string;
+    status: 'success' | 'error' | 'running' | 'waiting';
+}
+
+export async function activateWorkflow(id: string, credentialId?: string) {
+    const params = credentialId ? `?credentialId=${credentialId}` : '';
+    return apiFetch<Workflow>(`/v1/n8n/workflows/${id}/activate${params}`, {
+        method: 'POST',
+    });
+}
+
+export async function deactivateWorkflow(id: string, credentialId?: string) {
+    const params = credentialId ? `?credentialId=${credentialId}` : '';
+    return apiFetch<Workflow>(`/v1/n8n/workflows/${id}/deactivate${params}`, {
+        method: 'POST',
+    });
+}
+
+export async function executeWorkflow(id: string, data?: Record<string, unknown>, credentialId?: string) {
+    return apiFetch<{ executionId: string; status: string }>(`/v1/n8n/workflows/${id}/execute`, {
+        method: 'POST',
+        body: JSON.stringify({ data, credentialId }),
+    });
+}
+
+export async function getExecutions(workflowId?: string, limit?: number, credentialId?: string) {
+    const params = new URLSearchParams();
+    if (workflowId) params.append('workflowId', workflowId);
+    if (limit) params.append('limit', limit.toString());
+    if (credentialId) params.append('credentialId', credentialId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+
+    return apiFetch<{ data: Execution[] }>(`/v1/n8n/executions${queryString}`);
+}
