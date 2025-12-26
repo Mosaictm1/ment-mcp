@@ -1,0 +1,176 @@
+// Prisma Schema for n8n MCP Platform
+// This schema defines all database tables for the multi-tenant SaaS
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum SubscriptionTier {
+  free
+  supporter
+  enterprise
+}
+
+enum N8nCredentialStatus {
+  pending
+  verified
+  failed
+}
+
+enum WorkflowStatus {
+  draft
+  active
+  inactive
+  error
+}
+
+enum ExecutionStatus {
+  running
+  success
+  error
+  cancelled
+}
+
+// ============================================
+// TABLES
+// ============================================
+
+model User {
+  id               String           @id @default(uuid())
+  email            String           @unique
+  passwordHash     String           @map("password_hash")
+  name             String?
+  subscriptionTier SubscriptionTier @default(free) @map("subscription_tier")
+  stripeCustomerId String?          @map("stripe_customer_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  apiKeys        ApiKey[]
+  n8nCredentials N8nCredential[]
+  workflows      Workflow[]
+  apiCalls       ApiCallLog[]
+
+  @@map("users")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  name       String
+  keyHash    String    @map("key_hash")
+  keyPrefix  String    @map("key_prefix") // First 8 chars for identification
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  isActive   Boolean   @default(true) @map("is_active")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model N8nCredential {
+  id              String               @id @default(uuid())
+  userId          String               @map("user_id")
+  name            String               @default("My n8n Instance")
+  instanceUrl     String               @map("instance_url")
+  apiKeyEncrypted String               @map("api_key_encrypted")
+  status          N8nCredentialStatus  @default(pending)
+  createdAt       DateTime             @default(now()) @map("created_at")
+  lastVerifiedAt  DateTime?            @map("last_verified_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("n8n_credentials")
+}
+
+model Workflow {
+  id            String         @id @default(uuid())
+  userId        String         @map("user_id")
+  n8nWorkflowId String?        @map("n8n_workflow_id")
+  name          String
+  description   String?
+  jsonConfig    Json           @map("json_config")
+  version       Int            @default(1)
+  status        WorkflowStatus @default(draft)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  deployedAt    DateTime?      @map("deployed_at")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions Execution[]
+
+  @@index([n8nWorkflowId])
+  @@map("workflows")
+}
+
+model Execution {
+  id              String          @id @default(uuid())
+  workflowId      String          @map("workflow_id")
+  n8nExecutionId  String?         @map("n8n_execution_id")
+  status          ExecutionStatus
+  startedAt       DateTime        @default(now()) @map("started_at")
+  completedAt     DateTime?       @map("completed_at")
+  errorMessage    String?         @map("error_message")
+  logs            Json?
+  executionTimeMs Int?            @map("execution_time_ms")
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([startedAt(sort: Desc)])
+  @@map("executions")
+}
+
+model ApiCallLog {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  endpoint       String
+  method         String
+  timestamp      DateTime @default(now())
+  responseTimeMs Int?     @map("response_time_ms")
+  statusCode     Int?     @map("status_code")
+  quotaUsed      Int      @default(1) @map("quota_used")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp(sort: Desc)])
+  @@map("api_calls_log")
+}
+
+// Cache tables (no RLS needed, read-only)
+model NodesCache {
+  nodeName         String   @id @map("node_name")
+  nodeType         String?  @map("node_type")
+  displayName      String?  @map("display_name")
+  description      String?
+  properties       Json?
+  version          Float?
+  documentationUrl String?  @map("documentation_url")
+  updatedAt        DateTime @default(now()) @map("updated_at")
+
+  @@map("nodes_cache")
+}
+
+model TemplatesCache {
+  templateId      Int      @id @map("template_id")
+  name            String
+  description     String?
+  jsonConfig      Json     @map("json_config")
+  category        String?
+  tags            Json?
+  popularityScore Float    @default(0) @map("popularity_score")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+  @@index([category])
+  @@index([popularityScore(sort: Desc)])
+  @@map("templates_cache")
+}
