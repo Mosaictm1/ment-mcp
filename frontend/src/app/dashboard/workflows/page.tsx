@@ -4,33 +4,38 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/layout/Sidebar';
-import {
-    getWorkflows,
-    getN8nCredentials,
-    executeWorkflow,
-    getExecutions,
-    Workflow,
-    Execution,
-} from '@/lib/api';
+import { getN8nCredentials, getWorkflows, executeWorkflow, getExecutions, Workflow, Execution } from '@/lib/api';
 
 interface Credential {
     id: string;
     name: string;
-    instanceUrl: string;
     status: string;
 }
+
+const PlayIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+const RefreshIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+);
 
 export default function WorkflowsPage() {
     const router = useRouter();
     const { isLoading, isAuthenticated } = useAuth();
-    const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [credentials, setCredentials] = useState<Credential[]>([]);
-    const [selectedCredential, setSelectedCredential] = useState<string>('');
+    const [selectedCredId, setSelectedCredId] = useState<string>('');
+    const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [executions, setExecutions] = useState<Record<string, Execution[]>>({});
     const [loadingWorkflows, setLoadingWorkflows] = useState(false);
-    const [executingId, setExecutingId] = useState<string | null>(null);
-    const [error, setError] = useState('');
+    const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
     const [success, setSuccess] = useState('');
+    const [error, setError] = useState('');
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -38,271 +43,234 @@ export default function WorkflowsPage() {
         }
     }, [isLoading, isAuthenticated, router]);
 
-    // Load credentials
     useEffect(() => {
         if (isAuthenticated) {
             getN8nCredentials().then((res) => {
                 if (res.data) {
-                    setCredentials(res.data.credentials);
-                    // Auto-select first verified credential
-                    const verified = res.data.credentials.find(c => c.status === 'verified');
-                    if (verified) {
-                        setSelectedCredential(verified.id);
+                    const verified = res.data.credentials.filter(c => c.status === 'verified');
+                    setCredentials(verified);
+                    if (verified.length > 0 && !selectedCredId) {
+                        setSelectedCredId(verified[0].id);
                     }
                 }
             });
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, selectedCredId]);
 
-    // Load workflows when credential changes
     useEffect(() => {
-        if (selectedCredential) {
+        if (selectedCredId) {
             loadWorkflows();
         }
-    }, [selectedCredential]);
+    }, [selectedCredId]);
 
     const loadWorkflows = async () => {
+        if (!selectedCredId) return;
         setLoadingWorkflows(true);
         setError('');
 
-        const res = await getWorkflows(selectedCredential);
-        if (res.data) {
-            setWorkflows(res.data.data || []);
-            // Load executions for each workflow
-            const executionsMap: Record<string, Execution[]> = {};
-            for (const wf of (res.data.data || []).slice(0, 5)) {
-                const execRes = await getExecutions(wf.id, 3, selectedCredential);
-                if (execRes.data) {
-                    executionsMap[wf.id] = execRes.data.data || [];
-                }
-            }
-            setExecutions(executionsMap);
+        const res = await getWorkflows(selectedCredId);
+        if (res.data?.data) {
+            setWorkflows(res.data.data);
+            res.data.data.forEach(wf => {
+                getExecutions(wf.id, 3, selectedCredId).then((execRes) => {
+                    if (execRes.data?.data) {
+                        setExecutions(prev => ({ ...prev, [wf.id]: execRes.data!.data }));
+                    }
+                });
+            });
         } else if (res.error) {
             setError(res.error.message);
         }
-
         setLoadingWorkflows(false);
     };
 
-    const handleExecute = async (workflowId: string) => {
-        setExecutingId(workflowId);
-        setError('');
+    const handleRun = async (workflowId: string) => {
+        setRunningWorkflowId(workflowId);
         setSuccess('');
+        setError('');
 
-        const res = await executeWorkflow(workflowId, undefined, selectedCredential);
+        const res = await executeWorkflow(workflowId, {}, selectedCredId);
         if (res.data) {
-            setSuccess(`Workflow executed successfully! Execution ID: ${res.data.executionId}`);
-            // Reload executions
-            const execRes = await getExecutions(workflowId, 3, selectedCredential);
-            if (execRes.data) {
-                setExecutions(prev => ({ ...prev, [workflowId]: execRes.data!.data || [] }));
-            }
+            setSuccess(`Workflow executed successfully! Execution ID: ${res.data.id || 'N/A'}`);
+            setTimeout(() => loadWorkflows(), 2000);
         } else if (res.error) {
             setError(res.error.message);
         }
-
-        setExecutingId(null);
+        setRunningWorkflowId(null);
     };
 
     if (isLoading || !isAuthenticated) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-dark)' }}>
-                <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                    <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xl">Loading...</span>
-                </div>
+            <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0A0F' }}>
+                <div className="w-12 h-12 rounded-xl animate-pulse" style={{ background: 'linear-gradient(135deg, #57D957 0%, #3CB83C 100%)' }} />
             </div>
         );
     }
 
-    const verifiedCredentials = credentials.filter(c => c.status === 'verified');
-
     return (
-        <div className="min-h-screen flex" style={{ background: 'var(--bg-dark)' }}>
+        <div className="min-h-screen flex" style={{ background: '#0A0A0F' }}>
             <Sidebar />
 
-            {/* Main Content */}
-            <main className="flex-1 p-8 overflow-auto">
-                <div className="max-w-6xl">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-8">
+            <main className="flex-1 overflow-auto">
+                {/* Header */}
+                <header className="sticky top-0 z-10 px-8 py-6 backdrop-blur-xl" style={{ background: 'rgba(10, 10, 15, 0.8)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                                <span className="text-4xl">⚡</span>
+                            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+                                <span className="text-3xl">⚡</span>
                                 Workflows
                             </h1>
-                            <p className="text-[var(--text-muted)]">
-                                Manage and run your n8n workflows
-                            </p>
+                            <p className="text-white/40 text-sm mt-1">View and manage your n8n workflows</p>
                         </div>
-
-                        {/* Instance Selector */}
-                        {verifiedCredentials.length > 0 && (
-                            <div className="flex items-center gap-3">
-                                <label className="text-[var(--text-dim)] text-sm">Instance:</label>
+                        <div className="flex items-center gap-3">
+                            {credentials.length > 0 && (
                                 <select
-                                    value={selectedCredential}
-                                    onChange={(e) => setSelectedCredential(e.target.value)}
-                                    className="px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-dark)] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-all"
+                                    value={selectedCredId}
+                                    onChange={(e) => setSelectedCredId(e.target.value)}
+                                    className="px-4 py-2.5 rounded-xl text-sm bg-white/5 border border-white/10 text-white focus:outline-none focus:border-[#57D957]/50"
                                 >
-                                    {verifiedCredentials.map((cred) => (
-                                        <option key={cred.id} value={cred.id}>
+                                    {credentials.map(cred => (
+                                        <option key={cred.id} value={cred.id} className="bg-[#0A0A0F]">
                                             {cred.name}
                                         </option>
                                     ))}
                                 </select>
-                            </div>
-                        )}
+                            )}
+                            <button
+                                onClick={loadWorkflows}
+                                disabled={loadingWorkflows}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white/5 hover:bg-white/10 text-white/70 transition-colors"
+                            >
+                                <RefreshIcon />
+                                Refresh
+                            </button>
+                        </div>
                     </div>
+                </header>
 
+                <div className="px-8 py-6">
                     {/* Messages */}
                     {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 flex items-center gap-3 animate-fade-in">
+                        <div className="mb-6 p-4 rounded-xl flex items-center gap-3" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                             <span className="text-xl">⚠️</span>
-                            {error}
+                            <span className="text-red-400">{error}</span>
                         </div>
                     )}
                     {success && (
-                        <div className="mb-6 p-4 bg-[var(--primary)]/10 border border-[var(--primary)]/30 rounded-xl text-[var(--primary)] flex items-center gap-3 animate-fade-in">
+                        <div className="mb-6 p-4 rounded-xl flex items-center gap-3" style={{ background: 'rgba(87, 217, 87, 0.1)', border: '1px solid rgba(87, 217, 87, 0.2)' }}>
                             <span className="text-xl">✅</span>
-                            {success}
+                            <span style={{ color: '#57D957' }}>{success}</span>
                         </div>
                     )}
 
-                    {/* No Credentials Warning */}
-                    {verifiedCredentials.length === 0 && (
-                        <div className="card p-8 text-center">
+                    {/* No Credentials */}
+                    {credentials.length === 0 && (
+                        <div className="text-center py-16">
                             <div className="text-6xl mb-4">🔌</div>
-                            <h2 className="text-xl font-semibold text-white mb-2">
-                                No n8n Instance Connected
-                            </h2>
-                            <p className="text-[var(--text-muted)] mb-6">
-                                Connect your n8n instance to view and manage workflows
-                            </p>
+                            <h3 className="text-lg font-medium text-white mb-2">No n8n instances connected</h3>
+                            <p className="text-white/40 text-sm mb-6">Connect a verified n8n instance first</p>
                             <a
                                 href="/dashboard/settings"
-                                className="btn btn-primary inline-flex"
+                                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200"
+                                style={{ background: 'linear-gradient(135deg, #57D957 0%, #3CB83C 100%)', color: '#0A0A0F' }}
                             >
-                                + Connect n8n Instance
+                                Connect n8n
                             </a>
                         </div>
                     )}
 
-                    {/* Loading State */}
+                    {/* Loading */}
                     {loadingWorkflows && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="card p-6 animate-pulse">
-                                    <div className="h-6 bg-[var(--bg-card-hover)] rounded w-3/4 mb-4" />
-                                    <div className="h-4 bg-[var(--bg-card-hover)] rounded w-1/2 mb-2" />
-                                    <div className="h-4 bg-[var(--bg-card-hover)] rounded w-1/4" />
-                                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {[1, 2, 3, 4, 5, 6].map(i => (
+                                <div key={i} className="h-48 rounded-2xl animate-pulse" style={{ background: 'rgba(255,255,255,0.03)' }} />
                             ))}
                         </div>
                     )}
 
                     {/* Workflows Grid */}
-                    {!loadingWorkflows && workflows.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {workflows.map((workflow, index) => (
-                                <div
-                                    key={workflow.id}
-                                    className="card p-6 hover:border-[var(--primary)]/30 transition-all duration-300"
-                                    style={{ animationDelay: `${index * 0.05}s` }}
-                                >
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-lg font-semibold text-white truncate mb-1">
-                                                {workflow.name}
-                                            </h3>
-                                            <p className="text-[var(--text-dim)] text-sm">
-                                                ID: {workflow.id}
-                                            </p>
-                                        </div>
-                                        <span
-                                            className={`px-3 py-1 rounded-full text-xs font-semibold ${workflow.active
-                                                    ? 'bg-[var(--primary)]/20 text-[var(--primary)]'
-                                                    : 'bg-[var(--text-dim)]/20 text-[var(--text-dim)]'
-                                                }`}
+                    {!loadingWorkflows && credentials.length > 0 && (
+                        <>
+                            {workflows.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {workflows.map((wf) => (
+                                        <div
+                                            key={wf.id}
+                                            className="group p-5 rounded-2xl transition-all duration-300 hover:translate-y-[-2px]"
+                                            style={{
+                                                background: 'linear-gradient(135deg, rgba(20, 20, 28, 0.8) 0%, rgba(15, 15, 22, 0.9) 100%)',
+                                                border: '1px solid rgba(255,255,255,0.06)',
+                                            }}
                                         >
-                                            {workflow.active ? '● Active' : '○ Inactive'}
-                                        </span>
-                                    </div>
-
-                                    {/* Recent Executions */}
-                                    {executions[workflow.id] && executions[workflow.id].length > 0 && (
-                                        <div className="mb-4">
-                                            <p className="text-xs text-[var(--text-dim)] uppercase tracking-wider mb-2">
-                                                Recent Executions
-                                            </p>
-                                            <div className="flex gap-2">
-                                                {executions[workflow.id].map((exec) => (
-                                                    <span
-                                                        key={exec.id}
-                                                        className={`w-3 h-3 rounded-full ${exec.status === 'success'
-                                                                ? 'bg-[var(--primary)]'
-                                                                : exec.status === 'error'
-                                                                    ? 'bg-red-500'
-                                                                    : exec.status === 'running'
-                                                                        ? 'bg-yellow-500 animate-pulse'
-                                                                        : 'bg-[var(--text-dim)]'
-                                                            }`}
-                                                        title={`${exec.status} - ${new Date(exec.startedAt).toLocaleString()}`}
-                                                    />
-                                                ))}
+                                            {/* Header */}
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div
+                                                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                                                        style={{ background: wf.active ? 'rgba(87, 217, 87, 0.15)' : 'rgba(255,255,255,0.05)' }}
+                                                    >
+                                                        <span className="text-lg">⚡</span>
+                                                    </div>
+                                                    <div>
+                                                        <span
+                                                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                                                            style={{
+                                                                background: wf.active ? 'rgba(87, 217, 87, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                                                color: wf.active ? '#57D957' : '#EF4444',
+                                                            }}
+                                                        >
+                                                            {wf.active ? 'Active' : 'Inactive'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRun(wf.id)}
+                                                    disabled={runningWorkflowId === wf.id}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                                    style={{ background: 'rgba(87, 217, 87, 0.15)', color: '#57D957' }}
+                                                >
+                                                    <PlayIcon />
+                                                    {runningWorkflowId === wf.id ? 'Running...' : 'Run'}
+                                                </button>
                                             </div>
-                                        </div>
-                                    )}
 
-                                    {/* Actions */}
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handleExecute(workflow.id)}
-                                            disabled={executingId === workflow.id}
-                                            className="flex-1 px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-light)] text-[var(--bg-dark)] rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                        >
-                                            {executingId === workflow.id ? (
-                                                <>
-                                                    <div className="w-4 h-4 border-2 border-[var(--bg-dark)] border-t-transparent rounded-full animate-spin" />
-                                                    Running...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span>▶</span>
-                                                    Run
-                                                </>
+                                            {/* Name */}
+                                            <h3 className="font-semibold text-white mb-2 truncate">{wf.name}</h3>
+
+                                            {/* Meta */}
+                                            <p className="text-xs text-white/30 mb-4">
+                                                {wf.nodes?.length || 0} nodes · Updated {new Date(wf.updatedAt).toLocaleDateString()}
+                                            </p>
+
+                                            {/* Recent Executions */}
+                                            {executions[wf.id] && executions[wf.id].length > 0 && (
+                                                <div className="border-t border-white/5 pt-3">
+                                                    <p className="text-xs text-white/40 mb-2">Recent Executions</p>
+                                                    <div className="flex gap-1.5">
+                                                        {executions[wf.id].slice(0, 5).map((exec, i) => (
+                                                            <div
+                                                                key={i}
+                                                                className="w-3 h-3 rounded-full"
+                                                                title={`${exec.status} - ${new Date(exec.startedAt).toLocaleString()}`}
+                                                                style={{
+                                                                    background: exec.status === 'success' ? '#57D957' : exec.status === 'error' ? '#EF4444' : '#F59E0B',
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             )}
-                                        </button>
-                                        <button
-                                            onClick={() => window.open(`${credentials.find(c => c.id === selectedCredential)?.instanceUrl}/workflow/${workflow.id}`, '_blank')}
-                                            className="px-4 py-2.5 bg-[var(--bg-card-hover)] hover:bg-[var(--border-light)] text-[var(--text-light)] rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
-                                        >
-                                            <span>↗</span>
-                                            Open
-                                        </button>
-                                    </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Empty State */}
-                    {!loadingWorkflows && workflows.length === 0 && verifiedCredentials.length > 0 && (
-                        <div className="card p-8 text-center">
-                            <div className="text-6xl mb-4">📭</div>
-                            <h2 className="text-xl font-semibold text-white mb-2">
-                                No Workflows Found
-                            </h2>
-                            <p className="text-[var(--text-muted)] mb-6">
-                                Create your first workflow in n8n to see it here
-                            </p>
-                            <button
-                                onClick={() => window.open(credentials.find(c => c.id === selectedCredential)?.instanceUrl, '_blank')}
-                                className="btn btn-secondary inline-flex"
-                            >
-                                Open n8n →
-                            </button>
-                        </div>
+                            ) : (
+                                <div className="text-center py-16">
+                                    <div className="text-6xl mb-4">📦</div>
+                                    <h3 className="text-lg font-medium text-white mb-2">No workflows found</h3>
+                                    <p className="text-white/40 text-sm">Create workflows in your n8n instance</p>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </main>
