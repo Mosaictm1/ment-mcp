@@ -91,7 +91,7 @@ export default function WorkflowsPage() {
 
         const res = await executeWorkflow(workflowId, {}, selectedCredId);
         if (res.data) {
-            setSuccess(`Workflow executed successfully! Execution ID: ${res.data.id || 'N/A'}`);
+            setSuccess(`Workflow executed successfully! Execution ID: ${res.data.executionId || 'N/A'}`);
             setTimeout(() => loadWorkflows(), 2000);
         } else if (res.error) {
             setError(res.error.message);
@@ -239,7 +239,7 @@ export default function WorkflowsPage() {
 
                                             {/* Meta */}
                                             <p className="text-xs text-white/30 mb-4">
-                                                {wf.nodes?.length || 0} nodes · Updated {new Date(wf.updatedAt).toLocaleDateString()}
+                                                {wf.nodes?.length || 0} nodes {wf.updatedAt && `· Updated ${new Date(wf.updatedAt).toLocaleDateString()}`}
                                             </p>
 
                                             {/* Recent Executions */}
@@ -251,7 +251,7 @@ export default function WorkflowsPage() {
                                                             <div
                                                                 key={i}
                                                                 className="w-3 h-3 rounded-full"
-                                                                title={`${exec.status} - ${new Date(exec.startedAt).toLocaleString()}`}
+                                                                title={`${exec.status}${exec.startedAt ? ` - ${new Date(exec.startedAt).toLocaleString()}` : ''}`}
                                                                 style={{
                                                                     background: exec.status === 'success' ? '#57D957' : exec.status === 'error' ? '#EF4444' : '#F59E0B',
                                                                 }}
