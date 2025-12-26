@@ -1,211 +1,129 @@
-# 🚀 n8n MCP Platform
+# 🚀 Ment MCP Platform
 
-> منصة احترافية تتيح لمساعدات AI بناء automated workflows في n8n بدقة عالية
+> AI-Powered n8n Workflow Automation - Connect your AI to n8n and let it build, deploy, and debug workflows for you.
 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://ment-sigma.vercel.app)
+[![API](https://img.shields.io/badge/API-Online-blue)](https://ment-mcp-api.onrender.com/health)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 ---
 
-## 📋 Table of Contents
+## 🌐 Live URLs
 
-- [Overview](#overview)
-- [Problem & Solution](#problem--solution)
-- [Key Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+| Component | URL |
+|-----------|-----|
+| **Frontend** | https://ment-sigma.vercel.app |
+| **Backend API** | https://ment-mcp-api.onrender.com |
 
 ---
 
 ## 🎯 Overview
 
-**n8n MCP Platform** هي منصة Model Context Protocol (MCP) متكاملة تحل مشكلة فشل AI assistants في بناء n8n workflows بسبب:
-- JSON properties خاطئة
-- Documentation قديمة
-- عدم وجود validation
-
-### The Solution
-
-منصة توفر:
-- ✅ ربط مباشر بين AI و n8n
-- ✅ Documentation محدثة دائماً
-- ✅ Validation ذكية
-- ✅ Real-time monitoring
-- ✅ Live workflow access
+**Ment MCP Platform** connects AI assistants directly to n8n, enabling them to:
+- ✅ Build automated workflows
+- ✅ Deploy directly to your n8n instance
+- ✅ Debug and fix issues
+- ✅ Access 543+ nodes & 2,700+ templates
 
 ---
 
-## 🎯 Problem & Solution
-
-| المشكلة | الحل |
-|---------|------|
-| Copy-Paste JSON | Direct Deployment |
-| Screenshots | Live Workflow Access |
-| Outdated Configs | Always Current |
-| Blind Debugging | Smart Self-Correction |
-
----
-
-## ✨ Key Features
+## ✨ Features
 
 | Feature | Description |
 |---------|-------------|
-| 🔧 **543 Node Coverage** | Complete coverage of all n8n nodes with 99% accuracy |
+| 🔧 **543 Node Coverage** | Complete coverage of all n8n nodes |
 | 📚 **2,700+ Templates** | Ready-to-use workflow templates |
-| 📊 **Diff-Based Updates** | 80-90% token savings |
+| 📊 **Workflow Management** | View, run, and manage workflows |
+| 🔑 **API Keys** | Secure authentication for MCP tools |
 | 📡 **Real-Time Monitoring** | Live execution tracking |
-| 🔌 **Full n8n API Access** | Complete API integration |
-| 📖 **Always Current Docs** | Auto-updated documentation |
 
 ---
 
 ## 🛠 Tech Stack
 
-### Frontend
-- **Framework**: Next.js 14+
-- **Styling**: Tailwind CSS + shadcn/ui
-- **State**: TanStack Query + Zustand
-- **Forms**: React Hook Form + Zod
-- **Charts**: Recharts
-- **Animations**: Framer Motion
-
-### Backend
-- **Runtime**: Node.js 20+
-- **Framework**: Fastify
-- **Language**: TypeScript
-- **Database**: Supabase (PostgreSQL + Auth + Realtime)
-- **ORM**: Prisma / Supabase Client
-- **Auth**: Supabase Auth
-
-### DevOps
-- **Containers**: Docker
-- **CI/CD**: GitHub Actions
-- **Monitoring**: Sentry + DataDog
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | Next.js 14, React 19, Tailwind CSS |
+| **Backend** | Fastify, Prisma, TypeScript |
+| **Database** | Supabase (PostgreSQL) |
+| **Auth** | JWT |
+| **Hosting** | Vercel (Frontend), Render (Backend) |
 
 ---
 
 ## 📁 Project Structure
 
 ```
-n8n-mcp/
-├── docs/                          # Documentation
-│   ├── implementation_plan.md     # Implementation plan
-│   ├── architecture.md            # Technical architecture
-│   ├── api-specs.md               # API specifications
-│   ├── database-schema.md         # Database design
-│   ├── frontend-guide.md          # Frontend components
-│   ├── deployment.md              # Deployment guide
-│   └── development.md             # Development workflow
+ment-mcp/
+├── frontend/           # Next.js Frontend
+│   ├── src/app/        # Pages (dashboard, login, signup)
+│   ├── src/components/ # UI components
+│   └── src/lib/        # API client, auth context
 │
-├── frontend/                      # Next.js Frontend
-│   ├── src/
-│   │   ├── app/                   # App router pages
-│   │   ├── components/            # React components
-│   │   ├── lib/                   # Utilities
-│   │   ├── hooks/                 # Custom hooks
-│   │   └── styles/                # Global styles
-│   ├── public/                    # Static assets
-│   └── package.json
+├── backend/            # Fastify Backend
+│   ├── src/routes/     # API routes
+│   ├── src/services/   # Business logic
+│   └── prisma/         # Database schema
 │
-├── backend/                       # Node.js Backend
-│   ├── src/
-│   │   ├── api/                   # API routes
-│   │   ├── services/              # Business logic
-│   │   ├── models/                # Database models
-│   │   ├── middleware/            # Express middleware
-│   │   ├── utils/                 # Utilities
-│   │   └── config/                # Configuration
-│   ├── prisma/                    # Prisma schema
-│   └── package.json
-│
-├── mcp-server/                    # MCP Server
-│   ├── src/
-│   │   ├── tools/                 # MCP tools
-│   │   ├── resources/             # MCP resources
-│   │   └── prompts/               # MCP prompts
-│   └── package.json
-│
-├── docker/                        # Docker configurations
-├── scripts/                       # Utility scripts
-└── README.md
+└── docs/               # Documentation
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-### Prerequisites
-
-- Node.js 20+
-- PostgreSQL 14+
-- Redis 7+
-- Docker (optional)
-
-### Installation
+### Local Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/n8n-mcp.git
-cd n8n-mcp
+# Clone
+git clone https://github.com/Mosaictm1/ment-mcp.git
+cd ment-mcp
 
-# Install dependencies
-npm install
-
-# Setup environment
+# Backend
+cd backend
 cp .env.example .env
-# Edit .env with your configuration
+npm install
+npm run dev  # http://localhost:3001
 
-# Setup database
-npm run db:migrate
-npm run db:seed
-
-# Start development
-npm run dev
+# Frontend (new terminal)
+cd frontend
+npm install
+npm run dev  # http://localhost:3000
 ```
 
 ---
 
-## 📖 Documentation
+## 📖 API Endpoints
 
-| Document | Description |
-|----------|-------------|
-| [Implementation Plan](docs/implementation_plan.md) | Development phases & milestones |
-| [Architecture](docs/architecture.md) | System architecture & design |
-| [API Specifications](docs/api-specs.md) | Complete API documentation |
-| [Database Schema](docs/database-schema.md) | Database design & ERD |
-| [Frontend Guide](docs/frontend-guide.md) | Components & styling |
-| [Deployment](docs/deployment.md) | Production deployment |
-| [Development](docs/development.md) | Development workflow |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/v1/auth/signup` | POST | Register |
+| `/v1/auth/login` | POST | Login |
+| `/v1/users/profile` | GET | Get profile |
+| `/v1/users/api-keys` | GET/POST/DELETE | API Keys |
+| `/v1/n8n/workflows` | GET | List workflows |
+| `/v1/n8n/workflows/:id/execute` | POST | Run workflow |
 
 ---
 
-## 💰 Pricing Model
+## 💰 Pricing
 
 | Plan | Price | Features |
 |------|-------|----------|
-| **Free** | $0/forever | 100 MCP calls/day, All 543 nodes, 2,700+ templates |
-| **Supporter** | €19/month | Unlimited calls, Priority support, Early access |
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) first.
+| **Free** | $0/forever | 100 MCP calls/day |
+| **Supporter** | €19/month | Unlimited calls |
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
 
 ---
 
-## 📞 Contact
+## 📞 Links
 
-- **Website**: [n8n-mcp.com](https://n8n-mcp.com)
-- **GitHub**: [github.com/your-org/n8n-mcp](https://github.com/your-org/n8n-mcp)
-- **Email**: support@n8n-mcp.com
+- **Live App**: [ment-sigma.vercel.app](https://ment-sigma.vercel.app)
+- **API**: [ment-mcp-api.onrender.com](https://ment-mcp-api.onrender.com/health)
+- **GitHub**: [github.com/Mosaictm1/ment-mcp](https://github.com/Mosaictm1/ment-mcp)
