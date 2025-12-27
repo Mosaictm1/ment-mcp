@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../lib/prisma.js';
 import { AIConversationService, ConversationContext } from '../services/ai-conversation.service.js';
 
-interface AuthenticatedRequest extends FastifyRequest {
+interface AuthenticatedRequest {
     user?: {
         id: string;
         email: string;

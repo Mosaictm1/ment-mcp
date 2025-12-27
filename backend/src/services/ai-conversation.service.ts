@@ -130,12 +130,12 @@ export class AIConversationService {
                             conversationId: context.conversationId,
                             status: WorkflowPlanStatus.pending,
                             planData: toolCall.input,
-                            originalWorkflow: workflowContext || null,
+                            originalWorkflow: workflowContext ? (workflowContext as any) : null,
                             modifiedWorkflow: {
                                 ...workflowContext,
                                 nodes: toolCall.input.nodes,
                                 connections: toolCall.input.connections || workflowContext?.connections,
-                            },
+                            } as any,
                         },
                     });
 
@@ -230,7 +230,7 @@ export class AIConversationService {
                     instanceId: plan.conversation.instanceId,
                     userId: plan.conversation.userId,
                     versionNumber: (latestVersion?.versionNumber || 0) + 1,
-                    workflowData: result.workflow,
+                    workflowData: result.workflow as any,
                     changeDescription: (plan.planData as any).description || 'AI-generated changes',
                     createdByAi: true,
                     planId,

@@ -320,7 +320,15 @@ export async function n8nRoutes(app: FastifyInstance) {
         }
 
         const n8n = N8nService.fromEncrypted(credential.instanceUrl, credential.apiKeyEncrypted);
-        const isHealthy = await n8n.healthCheck();
+
+        // Verify connection by attempting to fetch workflows
+        let isHealthy = false;
+        try {
+            await n8n.getWorkflows();
+            isHealthy = true;
+        } catch {
+            isHealthy = false;
+        }
 
         // Update credential status
         await prisma.n8nCredential.update({
