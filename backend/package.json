@@ -16,6 +16,7 @@
         "db:push": "prisma db push",
         "db:migrate": "prisma migrate dev",
         "db:studio": "prisma studio",
+        "deploy": "prisma db push --accept-data-loss && npm run build",
         "test": "vitest",
         "test:run": "vitest run"
     },
