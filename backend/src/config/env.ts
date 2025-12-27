@@ -31,8 +31,8 @@ const envSchema = z.object({
     // CORS
     CORS_ORIGIN: z.string().default('http://localhost:3000'),
 
-    // Anthropic AI
-    ANTHROPIC_API_KEY: z.string().min(1),
+    // Anthropic AI (optional - AI features disabled if not set)
+    ANTHROPIC_API_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

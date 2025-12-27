@@ -105,6 +105,11 @@ export class AIConversationService {
             content: msg.content,
         }));
 
+        // Check if AI features are enabled
+        if (!env.ANTHROPIC_API_KEY) {
+            throw new Error('AI features are not configured. Please contact support.');
+        }
+
         // Initialize Anthropic service with server-side API key
         const anthropic = new AnthropicService({
             apiKey: env.ANTHROPIC_API_KEY,
