@@ -136,21 +136,11 @@ export async function aiRoutes(app: FastifyInstance) {
         Params: { id: string };
         Body: {
             message: string;
-            anthropicApiKey: string;
         };
     }>('/conversations/:id/messages', async (request, reply) => {
         const { id } = request.params;
-        const { message, anthropicApiKey } = request.body;
+        const { message } = request.body;
         const user = (request as AuthenticatedRequest).user!;
-
-        if (!anthropicApiKey) {
-            return reply.status(400).send({
-                error: {
-                    code: 'MISSING_API_KEY',
-                    message: 'Anthropic API key is required',
-                },
-            });
-        }
 
         // Get conversation
         const conversation = await prisma.conversation.findUnique({
@@ -180,7 +170,6 @@ export async function aiRoutes(app: FastifyInstance) {
             workflowId: conversation.workflowId || undefined,
             instanceId: conversation.instanceId,
             userId: user.id,
-            anthropicApiKey, // Session-only, not persisted
         };
 
         try {

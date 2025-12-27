@@ -13,13 +13,11 @@ interface Message {
 
 interface ChatInterfaceProps {
     conversationId: string;
-    anthropicApiKey: string;
     onPlanGenerated: (plan: any) => void;
 }
 
 export default function ChatInterface({
     conversationId,
-    anthropicApiKey,
     onPlanGenerated,
 }: ChatInterfaceProps) {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -86,7 +84,6 @@ export default function ChatInterface({
                     },
                     body: JSON.stringify({
                         message: userMessage,
-                        anthropicApiKey,
                     }),
                 }
             );
@@ -153,10 +150,10 @@ export default function ChatInterface({
                     >
                         <div
                             className={`max-w-[80%] rounded-lg p-4 ${message.role === 'user'
-                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                                    : message.role === 'system'
-                                        ? 'bg-yellow-900/30 border border-yellow-700 text-yellow-200'
-                                        : 'bg-gray-800 text-gray-100'
+                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                : message.role === 'system'
+                                    ? 'bg-yellow-900/30 border border-yellow-700 text-yellow-200'
+                                    : 'bg-gray-800 text-gray-100'
                                 }`}
                         >
                             {message.role === 'assistant' ? (

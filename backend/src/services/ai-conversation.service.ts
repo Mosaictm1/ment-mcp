@@ -2,13 +2,13 @@ import { prisma } from '../lib/prisma.js';
 import { AnthropicService, AnthropicMessage } from './anthropic.service.js';
 import { N8nService } from './n8n.service.js';
 import { ConversationStatus, MessageRole, WorkflowPlanStatus } from '@prisma/client';
+import { env } from '../config/env.js';
 
 export interface ConversationContext {
     conversationId: string;
     workflowId?: string;
     instanceId: string;
     userId: string;
-    anthropicApiKey: string; // Session-only, not persisted
 }
 
 export interface SendMessageResponse {
@@ -105,9 +105,9 @@ export class AIConversationService {
             content: msg.content,
         }));
 
-        // Initialize Anthropic service
+        // Initialize Anthropic service with server-side API key
         const anthropic = new AnthropicService({
-            apiKey: context.anthropicApiKey,
+            apiKey: env.ANTHROPIC_API_KEY,
         });
 
         // Get system prompt

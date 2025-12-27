@@ -11,6 +11,7 @@ const plans = [
             "100 MCP calls/day",
             "All 543 n8n nodes",
             "2,700+ templates",
+            "10 AI assistant messages/month",
             "Community support"
         ],
         cta: "Get Started Free",
@@ -24,6 +25,8 @@ const plans = [
         features: [
             "Unlimited MCP calls",
             "Everything in Free",
+            "Unlimited AI assistant",
+            "AI workflow building & fixing",
             "Priority support",
             "Early access to features"
         ],

@@ -31,11 +31,31 @@
 
 | Feature | Description |
 |---------|-------------|
+| 🤖 **AI Workflow Assistant** | Built-in Claude AI to build and fix workflows via chat |
 | 🔧 **543 Node Coverage** | Complete coverage of all n8n nodes |
 | 📚 **2,700+ Templates** | Ready-to-use workflow templates |
 | 📊 **Workflow Management** | View, run, and manage workflows |
 | 🔑 **API Keys** | Secure authentication for MCP tools |
 | 📡 **Real-Time Monitoring** | Live execution tracking |
+| 📝 **Plan Approval** | Review AI-generated changes before applying |
+| 🔄 **Version History** | Automatic backups of workflow changes |
+
+---
+
+## 🤖 AI Workflow Assistant
+
+The AI Workflow Assistant allows you to:
+- **Build workflows** - Describe what you want in natural language
+- **Fix workflows** - AI diagnoses and repairs broken nodes
+- **Optimize workflows** - Get suggestions for improvements
+- **Plan-Approve-Execute** - Review all changes before they're applied
+
+### How it Works
+1. Select your n8n instance
+2. Optionally select an existing workflow to modify
+3. Chat with AI to describe what you want
+4. Review the generated plan with before/after diffs
+5. Approve to apply changes (automatic backup created)
 
 ---
 
@@ -43,9 +63,10 @@
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | Next.js 14, React 19, Tailwind CSS |
+| **Frontend** | Next.js 16, React 19, Tailwind CSS 4 |
 | **Backend** | Fastify, Prisma, TypeScript |
 | **Database** | Supabase (PostgreSQL) |
+| **AI** | Anthropic Claude 3.5 Sonnet |
 | **Auth** | JWT |
 | **Hosting** | Vercel (Frontend), Render (Backend) |
 
@@ -56,13 +77,13 @@
 ```
 ment-mcp/
 ├── frontend/           # Next.js Frontend
-│   ├── src/app/        # Pages (dashboard, login, signup)
-│   ├── src/components/ # UI components
+│   ├── src/app/        # Pages (dashboard, login, signup, ai-workflows)
+│   ├── src/components/ # UI components (incl. ai/ for chat interface)
 │   └── src/lib/        # API client, auth context
 │
 ├── backend/            # Fastify Backend
-│   ├── src/routes/     # API routes
-│   ├── src/services/   # Business logic
+│   ├── src/routes/     # API routes (incl. ai.routes.ts)
+│   ├── src/services/   # Business logic (incl. AI services)
 │   └── prisma/         # Database schema
 │
 └── docs/               # Documentation
@@ -82,13 +103,33 @@ cd ment-mcp
 # Backend
 cd backend
 cp .env.example .env
+# Add ANTHROPIC_API_KEY to .env
 npm install
 npm run dev  # http://localhost:3001
 
 # Frontend (new terminal)
 cd frontend
+cp .env.example .env.local
 npm install
 npm run dev  # http://localhost:3000
+```
+
+### Required Environment Variables
+
+**Backend (.env)**
+```
+DATABASE_URL=
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+JWT_SECRET=
+ENCRYPTION_KEY=
+ANTHROPIC_API_KEY=    # Required for AI features
+```
+
+**Frontend (.env.local)**
+```
+NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
 ---
@@ -104,6 +145,10 @@ npm run dev  # http://localhost:3000
 | `/v1/users/api-keys` | GET/POST/DELETE | API Keys |
 | `/v1/n8n/workflows` | GET | List workflows |
 | `/v1/n8n/workflows/:id/execute` | POST | Run workflow |
+| `/v1/ai/conversations` | POST | Start AI conversation |
+| `/v1/ai/conversations/:id/messages` | POST | Send message to AI |
+| `/v1/ai/plans/:id/approve` | POST | Approve workflow plan |
+| `/v1/ai/plans/:id/reject` | POST | Reject workflow plan |
 
 ---
 
@@ -111,8 +156,8 @@ npm run dev  # http://localhost:3000
 
 | Plan | Price | Features |
 |------|-------|----------|
-| **Free** | $0/forever | 100 MCP calls/day |
-| **Supporter** | €19/month | Unlimited calls |
+| **Free** | $0/forever | 100 MCP calls/day, 10 AI messages/month |
+| **Supporter** | €19/month | Unlimited MCP calls, Unlimited AI assistant |
 
 ---
 

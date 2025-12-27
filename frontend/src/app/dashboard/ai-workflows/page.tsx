@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ChatInterface from '@/components/ai/ChatInterface';
-import PlanApproval from '@/components/ai/Plan Approval';
-import ApiKeyInput from '@/components/ai/ApiKeyInput';
+import PlanApproval from '@/components/ai/PlanApproval';
+import Sidebar from '@/components/layout/Sidebar';
 
 interface N8nInstance {
     id: string;
@@ -25,7 +25,6 @@ export default function AIWorkflowsPage() {
     const [selectedInstance, setSelectedInstance] = useState<string>('');
     const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
     const [conversationId, setConversationId] = useState<string | null>(null);
-    const [anthropicApiKey, setAnthropicApiKey] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [pendingPlan, setPendingPlan] = useState<any>(null);
 
@@ -93,8 +92,8 @@ export default function AIWorkflowsPage() {
     };
 
     const startConversation = async () => {
-        if (!selectedInstance || !anthropicApiKey) {
-            alert('Please select an instance and provide your Anthropic API key');
+        if (!selectedInstance) {
+            alert('Please select an n8n instance');
             return;
         }
 
@@ -129,43 +128,48 @@ export default function AIWorkflowsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+            <div className="min-h-screen flex" style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #0d0d14 100%)' }}>
+                <Sidebar />
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-xl animate-pulse" style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' }} />
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-gray-900 to-black p-6">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen flex" style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #0d0d14 50%, #0a0a0f 100%)' }}>
+            <Sidebar />
+            <main className="flex-1 overflow-auto p-8">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-white mb-2">
-                        🤖 AI Workflow Assistant
+                    <h1 className="text-2xl font-semibold text-white flex items-center gap-3">
+                        <span className="text-3xl">✨</span>
+                        AI Workflow Assistant
                     </h1>
-                    <p className="text-gray-300">
-                        Build and fix workflows with AI-powered assistance
+                    <p className="text-sm text-white/40 mt-1">
+                        Build and fix n8n workflows with AI-powered assistance
                     </p>
                 </div>
 
                 {/* Configuration Panel */}
                 {!conversationId && (
-                    <div className="glass-card p-6 mb-6">
-                        <h2 className="text-2xl font-bold text-white mb-6">Get Started</h2>
+                    <div className="rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, rgba(17, 17, 24, 0.9) 0%, rgba(13, 13, 18, 0.95) 100%)', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                        <h2 className="text-lg font-medium text-white mb-6">Get Started</h2>
 
                         {/* Instance Selection */}
                         <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <label className="block text-sm font-medium text-white/60 mb-2">
                                 Select n8n Instance
                             </label>
                             <select
                                 value={selectedInstance}
                                 onChange={(e) => setSelectedInstance(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                                className="w-full px-4 py-3 rounded-xl text-sm bg-white/[0.03] border border-white/[0.06] text-white focus:outline-none focus:border-green-500/50 transition-colors"
                             >
-                                <option value="">Choose an instance...</option>
+                                <option value="" className="bg-[#0a0a0f]">Choose an instance...</option>
                                 {instances.map((instance) => (
-                                    <option key={instance.id} value={instance.id}>
+                                    <option key={instance.id} value={instance.id} className="bg-[#0a0a0f]">
                                         {instance.name} ({instance.instanceUrl})
                                     </option>
                                 ))}
@@ -173,33 +177,48 @@ export default function AIWorkflowsPage() {
                         </div>
 
                         {/* Workflow Selection (Optional) */}
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-white/60 mb-2">
                                 Select Workflow (Optional)
                             </label>
                             <select
                                 value={selectedWorkflow}
                                 onChange={(e) => setSelectedWorkflow(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                                className="w-full px-4 py-3 rounded-xl text-sm bg-white/[0.03] border border-white/[0.06] text-white focus:outline-none focus:border-green-500/50 transition-colors disabled:opacity-50"
                                 disabled={!selectedInstance}
                             >
-                                <option value="">Create new workflow...</option>
+                                <option value="" className="bg-[#0a0a0f]">Create new workflow...</option>
                                 {workflows.map((workflow) => (
-                                    <option key={workflow.id} value={workflow.id}>
+                                    <option key={workflow.id} value={workflow.id} className="bg-[#0a0a0f]">
                                         {workflow.name} {workflow.active ? '(Active)' : '(Inactive)'}
                                     </option>
                                 ))}
                             </select>
                         </div>
 
-                        {/* API Key Input */}
-                        <ApiKeyInput value={anthropicApiKey} onChange={setAnthropicApiKey} />
+                        {/* AI Badge */}
+                        <div className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.15)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' }}>
+                                    <span className="text-lg">🤖</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-white">Powered by Claude AI</p>
+                                    <p className="text-xs text-white/40">AI usage included in your subscription plan</p>
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Start Button */}
                         <button
                             onClick={startConversation}
-                            disabled={!selectedInstance || !anthropicApiKey}
-                            className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                            disabled={!selectedInstance}
+                            className="w-full px-6 py-3 rounded-xl text-sm font-medium transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                            style={{
+                                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                color: '#fff',
+                                boxShadow: '0 4px 14px rgba(34, 197, 94, 0.25)'
+                            }}
                         >
                             Start AI Assistant
                         </button>
@@ -210,7 +229,6 @@ export default function AIWorkflowsPage() {
                 {conversationId && !pendingPlan && (
                     <ChatInterface
                         conversationId={conversationId}
-                        anthropicApiKey={anthropicApiKey}
                         onPlanGenerated={setPendingPlan}
                     />
                 )}
@@ -227,7 +245,7 @@ export default function AIWorkflowsPage() {
                         }}
                     />
                 )}
-            </div>
+            </main>
         </div>
     );
 }
