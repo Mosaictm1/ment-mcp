@@ -61,7 +61,7 @@ export default function DashboardPage() {
     const { user, isLoading, isAuthenticated } = useAuth();
     const [quota, setQuota] = useState<{ used: number; limit: number } | null>(null);
     const [credentials, setCredentials] = useState<Array<{ id: string; name: string; status: string; instanceUrl: string; createdAt?: string }>>([]);
-    const [apiKeys, setApiKeys] = useState<Array<{ id: string; name: string; keyPrefix: string; createdAt: string; lastUsedAt?: string }>>([]);
+    const [apiKeys, setApiKeys] = useState<Array<{ id: string; name: string; keyPrefix: string; createdAt: string; lastUsedAt?: string | null }>>([]);
     const [workflowCount, setWorkflowCount] = useState<number>(0);
     const [greeting, setGreeting] = useState('');
     const [timeOfDay, setTimeOfDay] = useState('');
