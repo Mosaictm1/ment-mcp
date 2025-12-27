@@ -52,7 +52,7 @@ export async function n8nRoutes(app: FastifyInstance) {
 
         try {
             const workflows = await n8n.getWorkflows();
-            return reply.send(workflows);
+            return reply.send({ data: workflows });
         } catch (error) {
             return reply.status(502).send({
                 error: {
@@ -259,7 +259,7 @@ export async function n8nRoutes(app: FastifyInstance) {
 
         try {
             const executions = await n8n.getExecutions(workflowId, limit ? parseInt(limit) : 20);
-            return reply.send(executions);
+            return reply.send({ data: executions });
         } catch (error) {
             return reply.status(502).send({
                 error: {
