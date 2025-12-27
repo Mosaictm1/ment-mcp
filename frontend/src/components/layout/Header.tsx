@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 
 export default function Header() {
@@ -19,8 +20,8 @@ export default function Header() {
     return (
         <header
             className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled
-                    ? 'glass border-b border-white/10 shadow-lg'
-                    : 'bg-transparent border-b border-[var(--border-dark)]'
+                ? 'glass border-b border-white/10 shadow-lg'
+                : 'bg-transparent border-b border-[var(--border-dark)]'
                 }`}
             style={{
                 backdropFilter: isScrolled ? 'blur(20px)' : 'blur(8px)',
@@ -35,15 +36,21 @@ export default function Header() {
                         className="flex items-center gap-3 group"
                     >
                         <div
-                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-110 bg-white/5"
                             style={{
                                 boxShadow: '0 4px 12px rgba(87, 217, 87, 0.3)',
                             }}
                         >
-                            <span className="text-black font-bold text-base md:text-lg">M</span>
+                            <Image
+                                src="/logo.jpg"
+                                alt="Ment Logo"
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                            />
                         </div>
                         <span className="font-bold text-lg md:text-xl text-white transition-colors group-hover:text-[var(--primary-light)]">
-                            Ment MCP
+                            Ment
                         </span>
                     </Link>
 

@@ -10,12 +10,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Ment MCP - AI-Powered n8n Workflow Automation",
+  title: "Ment - AI-Powered n8n Workflow Automation",
   description: "Build automated n8n workflows with AI precision. Direct n8n integration, always-updated documentation, smart validation, and real-time monitoring.",
   keywords: ["n8n", "MCP", "automation", "workflows", "AI", "Ment"],
-  authors: [{ name: "Ment MCP Team" }],
+  authors: [{ name: "Ment Team" }],
   openGraph: {
-    title: "Ment MCP",
+    title: "Ment",
     description: "The Evolution From Frustration to Flow",
     type: "website",
   },

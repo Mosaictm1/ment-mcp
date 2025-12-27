@@ -15,7 +15,7 @@ const plans = [
         ],
         cta: "Get Started Free",
         popular: false,
-        description: "Perfect for trying out Ment MCP"
+        description: "Perfect for trying out Ment"
     },
     {
         name: "Supporter",

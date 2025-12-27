@@ -40,7 +40,7 @@ export default function LoginPage() {
             <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl">
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-                    <p className="text-gray-300">Sign in to your Ment MCP account</p>
+                    <p className="text-gray-300">Sign in to your Ment account</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">

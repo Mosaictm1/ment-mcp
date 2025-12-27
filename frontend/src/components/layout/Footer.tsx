@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
     const currentYear = new Date().getFullYear();
@@ -20,15 +21,21 @@ export default function Footer() {
                     <div className="md:col-span-2">
                         <Link href="/" className="flex items-center gap-3 mb-4 group w-fit">
                             <div
-                                className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center transition-transform group-hover:scale-110"
+                                className="w-10 h-10 rounded-xl overflow-hidden transition-transform group-hover:scale-110 bg-white/5"
                                 style={{
                                     boxShadow: '0 4px 12px rgba(87, 217, 87, 0.3)',
                                 }}
                             >
-                                <span className="text-black font-bold text-base">M</span>
+                                <Image
+                                    src="/logo.jpg"
+                                    alt="Ment Logo"
+                                    width={40}
+                                    height={40}
+                                    className="w-full h-full object-cover"
+                                />
                             </div>
                             <span className="font-bold text-xl text-white group-hover:text-[var(--primary-light)] transition-colors">
-                                Ment MCP
+                                Ment
                             </span>
                         </Link>
                         <p className="text-[var(--text-muted)] text-sm max-w-sm mb-6 leading-relaxed">
@@ -101,7 +108,7 @@ export default function Footer() {
                 <div className="pt-8 border-t border-white/10">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <p className="text-xs text-[var(--text-dim)] text-center md:text-left">
-                            © {currentYear} Ment MCP. Open source under{" "}
+                            © {currentYear} Ment. Open source under{" "}
                             <Link
                                 href="/license"
                                 className="text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors font-medium"

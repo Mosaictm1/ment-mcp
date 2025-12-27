@@ -17,7 +17,7 @@ export default function Demo() {
                     <h2>
                         See It in <span className="gradient-text">Action</span>
                     </h2>
-                    <p>Watch how Ment MCP transforms natural language into working automations.</p>
+                    <p>Watch how Ment transforms natural language into working automations.</p>
                 </div>
 
                 <div className="max-w-4xl mx-auto">
