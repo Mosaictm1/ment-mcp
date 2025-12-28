@@ -297,7 +297,7 @@ export async function deactivateWorkflow(id: string, credentialId?: string) {
 }
 
 export async function executeWorkflow(id: string, data?: Record<string, unknown>, credentialId?: string) {
-    return apiFetch<{ executionId: string; status: string }>(`/v1/n8n/workflows/${id}/execute`, {
+    return apiFetch<{ executionId: string; status: string; error?: string }>(`/v1/n8n/workflows/${id}/execute`, {
         method: 'POST',
         body: JSON.stringify({ data, credentialId }),
     });

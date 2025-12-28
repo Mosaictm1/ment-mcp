@@ -88,9 +88,23 @@ export default function WorkflowsPage() {
         setRunningWorkflowId(null);
 
         if (res.data) {
-            // Refresh executions after a delay
-            setTimeout(() => loadWorkflows(), 2000);
-            return { success: true, executionId: res.data.executionId };
+            // Check if the response contains an error status (from n8n service)
+            if (res.data.status === 'error' || res.data.error) {
+                return {
+                    success: false,
+                    error: res.data.error || 'Workflow execution failed'
+                };
+            }
+
+            // Check for valid execution ID
+            if (res.data.executionId && res.data.executionId !== '' && res.data.executionId !== 'unknown') {
+                // Refresh executions after a delay
+                setTimeout(() => loadWorkflows(), 2000);
+                return { success: true, executionId: res.data.executionId };
+            }
+
+            // If we get here with no proper execution ID, treat as error
+            return { success: false, error: 'Workflow execution did not return a valid execution ID' };
         } else if (res.error) {
             return { success: false, error: res.error.message };
         }
@@ -188,8 +202,8 @@ export default function WorkflowsPage() {
                                     key={filter}
                                     onClick={() => setFilterActive(filter)}
                                     className={`px-4 py-3 text-sm font-medium transition-colors ${filterActive === filter
-                                            ? 'bg-green-500/20 text-green-400'
-                                            : 'text-white/40 hover:text-white/60'
+                                        ? 'bg-green-500/20 text-green-400'
+                                        : 'text-white/40 hover:text-white/60'
                                         }`}
                                 >
                                     {filter.charAt(0).toUpperCase() + filter.slice(1)}

@@ -124,6 +124,21 @@ export default function ExecuteWorkflowModal({ workflow, onClose, onExecute }: E
                                         </motion.div>
                                         <h4 className="text-lg font-semibold text-white mb-2">Execution Failed</h4>
                                         <p className="text-sm text-red-400 mb-4">{result.error || 'Unknown error occurred'}</p>
+
+                                        {/* Show helpful tip for n8n Cloud users */}
+                                        {result.error?.includes('API execution') && (
+                                            <div className="mb-4 p-4 rounded-xl text-left max-w-md mx-auto"
+                                                style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                                                <p className="text-sm text-blue-400 font-medium mb-2">💡 How to fix this:</p>
+                                                <ol className="text-xs text-blue-300/80 space-y-1 list-decimal list-inside">
+                                                    <li>Open your workflow in n8n</li>
+                                                    <li>Add a <strong>Webhook</strong> trigger node</li>
+                                                    <li>Activate the workflow</li>
+                                                    <li>Use the webhook URL to trigger it</li>
+                                                </ol>
+                                            </div>
+                                        )}
+
                                         <div className="flex gap-3 justify-center">
                                             <button
                                                 onClick={() => setResult(null)}
