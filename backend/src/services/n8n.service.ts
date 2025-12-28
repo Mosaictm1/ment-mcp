@@ -145,10 +145,12 @@ export class N8nService {
     }
 
     /**
-     * Get single execution by ID
+     * Get single execution by ID with full data
      */
     async getExecution(executionId: string): Promise<N8nExecution> {
-        const response = await this.client.get(`/executions/${executionId}`);
+        const response = await this.client.get(`/executions/${executionId}`, {
+            params: { includeData: true }
+        });
         return response.data;
     }
 
