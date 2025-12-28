@@ -4,6 +4,26 @@ All notable changes to the Ment MCP Platform will be documented in this file.
 
 ---
 
+## [2024-12-28] - Database Connection Pool & n8n API Fixes
+
+### Fixed
+- **Database Connection Pool Exhaustion**
+  - **Root Cause**: Supabase Session mode has limited connections, Prisma was creating too many clients
+  - **Solution**: Updated `prisma.ts` to:
+    - Add `connection_limit=5` to prevent pool exhaustion
+    - Use singleton pattern in ALL environments (not just dev)
+    - Add graceful shutdown handler
+
+- **n8n API 405 Method Not Allowed**
+  - **Root Cause**: n8n Cloud doesn't support `/workflows/{id}/execute` endpoint
+  - **Solution**: Added clear error message explaining that Webhook triggers are needed
+
+### Files Modified
+- `backend/src/lib/prisma.ts` - Connection pooling and singleton fixes
+- `backend/src/services/n8n.service.ts` - Better error handling for 405/404
+
+---
+
 ## [2024-12-28] - Workflow Execution Fix v2
 
 ### Fixed

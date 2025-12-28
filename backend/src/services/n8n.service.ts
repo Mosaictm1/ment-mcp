@@ -194,12 +194,32 @@ export class N8nService {
                 data: execData?.resultData || execData?.data || execData,
             };
         } catch (error: any) {
-            console.error(`[N8N] Execute error:`, error.response?.status, error.response?.data || error.message);
+            const status = error.response?.status;
+            const message = error.response?.data?.message || error.message;
+
+            console.error(`[N8N] Execute error: ${status}`, error.response?.data || message);
+
+            // Handle specific error cases
+            if (status === 405) {
+                return {
+                    executionId: '',
+                    status: 'error',
+                    error: 'This n8n instance does not support API execution. Use a Webhook trigger in your workflow instead.',
+                };
+            }
+
+            if (status === 404) {
+                return {
+                    executionId: '',
+                    status: 'error',
+                    error: `Workflow ${workflowId} not found or execute endpoint not available.`,
+                };
+            }
 
             return {
                 executionId: '',
                 status: 'error',
-                error: error.response?.data?.message || error.response?.data?.error || error.message,
+                error: message,
             };
         }
     }
