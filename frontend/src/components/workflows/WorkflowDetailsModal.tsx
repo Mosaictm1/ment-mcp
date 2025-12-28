@@ -226,20 +226,20 @@ export default function WorkflowDetailsModal({ workflow, credentialId, onClose, 
                         >
                             <div className="py-3 space-y-3">
                                 {/* Error */}
-                                {node.error && (
+                                {node.error ? (
                                     <div>
                                         <label className="text-xs font-medium text-red-400 flex items-center gap-1.5 mb-1.5">
                                             <AlertCircle className="w-3 h-3" />
                                             Error
                                         </label>
                                         <div className="p-3 rounded-lg text-xs text-red-300" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
-                                            {node.error}
+                                            {String(node.error)}
                                         </div>
                                     </div>
-                                )}
+                                ) : null}
 
                                 {/* Input Data */}
-                                {node.inputData && (
+                                {node.inputData ? (
                                     <div>
                                         <label className="text-xs font-medium text-blue-400 flex items-center gap-1.5 mb-1.5">
                                             <ArrowRight className="w-3 h-3" />
@@ -250,10 +250,10 @@ export default function WorkflowDetailsModal({ workflow, credentialId, onClose, 
                                             {JSON.stringify(node.inputData, null, 2)}
                                         </pre>
                                     </div>
-                                )}
+                                ) : null}
 
                                 {/* Output Data */}
-                                {node.outputData && (
+                                {node.outputData ? (
                                     <div>
                                         <label className="text-xs font-medium text-green-400 flex items-center gap-1.5 mb-1.5">
                                             <Database className="w-3 h-3" />
@@ -264,11 +264,11 @@ export default function WorkflowDetailsModal({ workflow, credentialId, onClose, 
                                             {JSON.stringify(node.outputData, null, 2)}
                                         </pre>
                                     </div>
-                                )}
+                                ) : null}
 
-                                {!node.inputData && !node.outputData && !node.error && (
+                                {!node.inputData && !node.outputData && !node.error ? (
                                     <p className="text-xs text-white/30 italic">No data available</p>
-                                )}
+                                ) : null}
                             </div>
                         </motion.div>
                     )}
