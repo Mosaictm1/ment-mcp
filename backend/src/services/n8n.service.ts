@@ -154,24 +154,39 @@ export class N8nService {
 
     /**
      * Execute workflow manually
-     * Uses POST /executions to run a workflow by ID
+     * Uses POST /workflows/{id}/execute - the official n8n API endpoint
      */
     async executeWorkflow(
         workflowId: string,
         data?: Record<string, unknown>
     ): Promise<WorkflowExecutionResult> {
         try {
-            // n8n API: POST /executions with workflowId in body
-            const response = await this.client.post('/executions', {
-                workflowId,
-                data: data || {},
-            });
+            console.log(`[N8N] Executing workflow ${workflowId}...`);
 
-            // n8n response can vary - handle multiple possible formats
+            // n8n API: POST /workflows/{id}/execute
+            // DO NOT wrap data in a nested object - send directly
+            const response = await this.client.post(`/workflows/${workflowId}/execute`, data || {});
+
+            console.log(`[N8N] Raw response:`, JSON.stringify(response.data, null, 2));
+
+            // n8n response format can vary:
+            // - { data: { executionId: "...", ... } }
+            // - { executionId: "..." }
+            // - { id: "..." }
             const execData = response.data?.data || response.data;
-            const executionId = execData?.id || execData?.executionId || response.data?.id || 'unknown';
-            const finished = execData?.finished ?? response.data?.finished ?? false;
+
+            // Try multiple ways to find the execution ID
+            const executionId =
+                execData?.executionId ||
+                execData?.id ||
+                response.data?.executionId ||
+                response.data?.id ||
+                'unknown';
+
+            const finished = execData?.finished ?? response.data?.finished ?? true;
             const status = finished ? 'success' : 'running';
+
+            console.log(`[N8N] Parsed - executionId: ${executionId}, status: ${status}`);
 
             return {
                 executionId: String(executionId),
@@ -179,44 +194,12 @@ export class N8nService {
                 data: execData?.resultData || execData?.data || execData,
             };
         } catch (error: any) {
-            // Check if it's a 404 - endpoint might not exist, try alternative
-            if (error.response?.status === 404) {
-                return this.executeWorkflowLegacy(workflowId, data);
-            }
+            console.error(`[N8N] Execute error:`, error.response?.status, error.response?.data || error.message);
+
             return {
                 executionId: '',
                 status: 'error',
-                error: error.response?.data?.message || error.message,
-            };
-        }
-    }
-
-    /**
-     * Legacy workflow execution using /workflows/{id}/execute
-     * Fallback for older n8n versions
-     */
-    private async executeWorkflowLegacy(
-        workflowId: string,
-        data?: Record<string, unknown>
-    ): Promise<WorkflowExecutionResult> {
-        try {
-            const response = await this.client.post(`/workflows/${workflowId}/execute`, {
-                data: data || {},
-            });
-
-            const execData = response.data?.data || response.data;
-            const executionId = execData?.id || execData?.executionId || response.data?.id || 'unknown';
-
-            return {
-                executionId: String(executionId),
-                status: execData?.finished ? 'success' : 'running',
-                data: execData?.resultData || execData?.data || execData,
-            };
-        } catch (error: any) {
-            return {
-                executionId: '',
-                status: 'error',
-                error: error.response?.data?.message || error.message,
+                error: error.response?.data?.message || error.response?.data?.error || error.message,
             };
         }
     }
