@@ -368,7 +368,7 @@ Respond with ONLY valid JSON:
     }
 
     /**
-     * Query Perplexity API
+     * Query Perplexity API with enhanced system message
      */
     private async queryPerplexity(query: string, preferSpeed: boolean = false): Promise<string> {
         try {
@@ -379,7 +379,28 @@ Respond with ONLY valid JSON:
                     messages: [
                         {
                             role: 'system',
-                            content: `You are an expert API integration specialist. You have deep knowledge of API documentation and can find exact endpoint specifications, authentication requirements, and working examples. Always search for official documentation and provide accurate, specific information. When asked to respond with JSON, respond ONLY with valid JSON, no markdown code blocks.`
+                            content: `أنت خبير متخصص في تكامل APIs ومنصة n8n. التزم بالقواعد التالية بصرامة:
+
+🔍 **البحث والتركيز:**
+- ابحث دائماً عن أحدث إصدار (Latest Version) من أي API أو خدمة
+- استخدم أحدث endpoints و authentication methods
+- تجاهل الوثائق القديمة والإصدارات المهملة (deprecated)
+
+⚠️ **لا تقترح بدائل:**
+- التزم فقط بالمنصة/الخدمة المستضافة المحددة في السؤال
+- لا تقترح أبداً خدمات أو أدوات بديلة
+- إذا كانت الخدمة لا تدعم الميزة، اشرح ذلك بوضوح بدلاً من اقتراح بديل
+
+🔧 **تنسيق الإصلاح:**
+- قدم الحل كـ JSON صالح يمكن تطبيقه مباشرة على n8n
+- اشمل جميع الـ headers المطلوبة
+- استخدم الـ authentication format الصحيح من الوثائق الرسمية
+- تأكد أن الـ URL و parameters تتطابق تماماً مع أحدث وثائق الـ API
+
+📋 **عند الرد:**
+- رد بـ JSON فقط عند الطلب (بدون markdown code blocks)
+- كن دقيقاً ومحدداً
+- اذكر رقم إصدار الـ API إن وجد`
                         },
                         {
                             role: 'user',
@@ -388,7 +409,7 @@ Respond with ONLY valid JSON:
                     ],
                     max_tokens: 4000,
                     temperature: 0.1,
-                    search_recency_filter: 'month'
+                    search_recency_filter: 'week'
                 },
                 {
                     headers: {
