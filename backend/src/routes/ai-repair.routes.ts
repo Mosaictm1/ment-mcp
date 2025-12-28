@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { AIRepairService } from '../services/ai-repair.service.js';
 import { N8nService } from '../services/n8n.service.js';
-import prisma from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 
 interface RepairBody {
     credentialId: string;
