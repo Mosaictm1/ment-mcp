@@ -4,6 +4,41 @@ All notable changes to the Ment MCP Platform will be documented in this file.
 
 ---
 
+## [2024-12-28] - Radical UI Rebuild: Onboarding & Workflow Management
+
+### Added
+- **Onboarding Wizard** - New multi-step onboarding flow after registration:
+  - Welcome screen with animations
+  - n8n instance connection form (matching modern design)
+  - Connection verification with loading state
+  - Success screen with redirect to workflows
+
+- **Enhanced Workflows Page**:
+  - New `WorkflowCard` component with animations and hover effects
+  - `ExecuteWorkflowModal` for running workflows with JSON input
+  - Search functionality for filtering workflows by name
+  - Filter buttons (All/Active/Inactive)
+  - Stats bar showing total/active/inactive counts
+  - Execution history display on each workflow card
+
+### Changed
+- **Signup Flow**: New users now redirect to `/onboarding` instead of `/dashboard`
+- **Login Flow**: Returns users to `/dashboard/workflows` if they have n8n credentials, otherwise `/onboarding`
+- **Dependencies**: Added `framer-motion` for smooth animations
+
+### Files Added
+- `frontend/src/components/onboarding/OnboardingWizard.tsx`
+- `frontend/src/app/onboarding/page.tsx`
+- `frontend/src/components/workflows/ExecuteWorkflowModal.tsx`
+- `frontend/src/components/workflows/WorkflowCard.tsx`
+
+### Files Modified
+- `frontend/src/app/signup/page.tsx` - Changed redirect to onboarding
+- `frontend/src/app/login/page.tsx` - Added credential check for smart redirect
+- `frontend/src/app/dashboard/workflows/page.tsx` - Complete rebuild with new UI
+
+---
+
 ## [2024-12-28] - Database Connection Pool & n8n API Fixes
 
 ### Fixed

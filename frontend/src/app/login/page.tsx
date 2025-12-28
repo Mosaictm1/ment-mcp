@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { login } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { getN8nCredentials } from '@/lib/api';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -29,7 +30,14 @@ export default function LoginPage() {
 
         if (result.data) {
             await authLogin(result.data.tokens.accessToken, result.data.tokens.refreshToken);
-            router.push('/dashboard');
+
+            // Check if user has n8n credentials
+            const credResult = await getN8nCredentials();
+            if (credResult.data && credResult.data.credentials.length > 0) {
+                router.push('/dashboard/workflows');
+            } else {
+                router.push('/onboarding');
+            }
         }
 
         setIsLoading(false);

@@ -42,7 +42,7 @@ export default function SignupPage() {
 
         if (result.data) {
             await authLogin(result.data.tokens.accessToken, result.data.tokens.refreshToken);
-            router.push('/dashboard');
+            router.push('/onboarding');
         }
 
         setIsLoading(false);
