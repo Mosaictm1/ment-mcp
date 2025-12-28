@@ -76,11 +76,18 @@ export default function WorkflowsPage() {
         const res = await getWorkflows(selectedCredId);
         if (res.data?.data) {
             setWorkflows(res.data.data);
-            res.data.data.forEach(wf => {
-                getExecutions(wf.id, 3, selectedCredId).then((execRes) => {
-                    if (execRes.data?.data) setExecutions(prev => ({ ...prev, [wf.id]: execRes.data!.data }));
-                });
-            });
+            // Load executions for first 5 workflows only to avoid rate limiting
+            const workflowsToLoad = res.data.data.slice(0, 5);
+            for (const wf of workflowsToLoad) {
+                try {
+                    const execRes = await getExecutions(wf.id, 3, selectedCredId);
+                    if (execRes.data?.data) {
+                        setExecutions(prev => ({ ...prev, [wf.id]: execRes.data!.data }));
+                    }
+                } catch (e) {
+                    console.log('Failed to load executions for', wf.id);
+                }
+            }
         } else if (res.error) setError(res.error.message);
         setLoadingWorkflows(false);
     };
