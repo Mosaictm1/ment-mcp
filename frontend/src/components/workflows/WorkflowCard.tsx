@@ -110,25 +110,34 @@ export default function WorkflowCard({ workflow, executions = [], isRunning, onR
                             <Clock className="w-3.5 h-3.5" />
                             Recent executions
                         </p>
-                        <div className="flex gap-2">
-                            {executions.slice(0, 6).map((exec, i) => (
-                                <div
-                                    key={exec.id || i}
-                                    className="relative group/exec"
-                                >
+                        <div className="flex items-center justify-between">
+                            <div className="flex gap-2">
+                                {executions.slice(0, 6).map((exec, i) => (
                                     <div
-                                        className="w-3 h-3 rounded-full transition-transform duration-200 group-hover/exec:scale-125"
-                                        style={{ background: getStatusColor(exec.status) }}
-                                    />
-                                    {/* Tooltip */}
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded bg-black/90 text-[10px] text-white whitespace-nowrap opacity-0 group-hover/exec:opacity-100 transition-opacity pointer-events-none">
-                                        {exec.status}
-                                        {exec.startedAt && (
-                                            <span className="text-white/50"> · {new Date(exec.startedAt).toLocaleTimeString()}</span>
-                                        )}
+                                        key={exec.id || i}
+                                        className="relative group/exec"
+                                    >
+                                        <div
+                                            className="w-3 h-3 rounded-full transition-transform duration-200 group-hover/exec:scale-125"
+                                            style={{ background: getStatusColor(exec.status) }}
+                                        />
+                                        {/* Tooltip */}
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded bg-black/90 text-[10px] text-white whitespace-nowrap opacity-0 group-hover/exec:opacity-100 transition-opacity pointer-events-none">
+                                            {exec.status}
+                                            {exec.startedAt && (
+                                                <span className="text-white/50"> · {new Date(exec.startedAt).toLocaleTimeString()}</span>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
+                            <a
+                                href={`/dashboard/workflows/${workflow.id}/executions`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors"
+                            >
+                                View all →
+                            </a>
                         </div>
                     </div>
                 )}

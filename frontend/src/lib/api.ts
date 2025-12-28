@@ -355,3 +355,68 @@ export async function getExecution(executionId: string, credentialId?: string) {
     const params = credentialId ? `?credentialId=${credentialId}` : '';
     return apiFetch<ExecutionDetail>(`/v1/n8n/executions/${executionId}${params}`);
 }
+
+// ============================================
+// AI REPAIR
+// ============================================
+
+export interface RepairSuggestion {
+    summary: string;
+    explanation: string;
+    suggestedFix: {
+        parameters?: Record<string, unknown>;
+        code?: string;
+    };
+    documentation?: string;
+    confidence: 'high' | 'medium' | 'low';
+}
+
+export interface ImproveSuggestion {
+    summary: string;
+    improvements: Array<{
+        title: string;
+        description: string;
+        implementation?: string;
+    }>;
+    performance?: string;
+    security?: string;
+}
+
+export async function repairNode(
+    credentialId: string,
+    nodeName: string,
+    nodeType: string,
+    error: string,
+    nodeParameters?: Record<string, unknown>,
+    inputData?: unknown
+) {
+    return apiFetch<{ success: boolean; suggestion: RepairSuggestion }>('/v1/ai/repair', {
+        method: 'POST',
+        body: JSON.stringify({ credentialId, nodeName, nodeType, nodeParameters, error, inputData }),
+    });
+}
+
+export async function improveNode(
+    nodeName: string,
+    nodeType: string,
+    nodeParameters?: Record<string, unknown>,
+    inputData?: unknown,
+    outputData?: unknown
+) {
+    return apiFetch<{ success: boolean; suggestion: ImproveSuggestion }>('/v1/ai/improve', {
+        method: 'POST',
+        body: JSON.stringify({ nodeName, nodeType, nodeParameters, inputData, outputData }),
+    });
+}
+
+export async function applyNodeFix(
+    credentialId: string,
+    workflowId: string,
+    nodeName: string,
+    suggestedParameters: Record<string, unknown>
+) {
+    return apiFetch<{ success: boolean; message: string; workflow: Workflow }>('/v1/ai/apply-fix', {
+        method: 'POST',
+        body: JSON.stringify({ credentialId, workflowId, nodeName, suggestedParameters }),
+    });
+}

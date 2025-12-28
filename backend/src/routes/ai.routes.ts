@@ -1,6 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../lib/prisma.js';
 import { AIConversationService, ConversationContext } from '../services/ai-conversation.service.js';
+import { AIRepairService } from '../services/ai-repair.service.js';
+import { N8nService } from '../services/n8n.service.js';
 
 interface AuthenticatedRequest {
     user?: {
@@ -276,5 +278,146 @@ export async function aiRoutes(app: FastifyInstance) {
 
         const versions = await AIConversationService.getWorkflowHistory(workflowId, instanceId);
         return reply.send({ versions });
+    });
+
+    // ============================================
+    // REPAIR NODE (with Perplexity for HTTP Request)
+    // ============================================
+    app.post<{
+        Body: {
+            credentialId: string;
+            nodeName: string;
+            nodeType: string;
+            nodeParameters?: Record<string, unknown>;
+            error: string;
+            inputData?: unknown;
+        };
+    }>('/repair', async (request, reply) => {
+        const { nodeName, nodeType, nodeParameters, error, inputData } = request.body;
+
+        const perplexityKey = process.env.PERPLEXITY_API_KEY;
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+        if (!perplexityKey || !anthropicKey) {
+            return reply.status(500).send({
+                error: {
+                    code: 'CONFIG_ERROR',
+                    message: 'AI repair service not configured. Add PERPLEXITY_API_KEY to .env',
+                },
+            });
+        }
+
+        try {
+            const aiService = new AIRepairService(perplexityKey, anthropicKey);
+            const suggestion = await aiService.repairNode(
+                { name: nodeName, type: nodeType, parameters: nodeParameters },
+                error,
+                inputData
+            );
+
+            return reply.send({ success: true, suggestion });
+        } catch (err: any) {
+            return reply.status(500).send({
+                error: { code: 'AI_ERROR', message: err.message || 'Failed to analyze node' },
+            });
+        }
+    });
+
+    // ============================================
+    // IMPROVE NODE
+    // ============================================
+    app.post<{
+        Body: {
+            nodeName: string;
+            nodeType: string;
+            nodeParameters?: Record<string, unknown>;
+            inputData?: unknown;
+            outputData?: unknown;
+        };
+    }>('/improve', async (request, reply) => {
+        const { nodeName, nodeType, nodeParameters, inputData, outputData } = request.body;
+
+        const perplexityKey = process.env.PERPLEXITY_API_KEY;
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+        if (!perplexityKey || !anthropicKey) {
+            return reply.status(500).send({
+                error: {
+                    code: 'CONFIG_ERROR',
+                    message: 'AI improve service not configured. Add PERPLEXITY_API_KEY to .env',
+                },
+            });
+        }
+
+        try {
+            const aiService = new AIRepairService(perplexityKey, anthropicKey);
+            const suggestion = await aiService.improveNode(
+                { name: nodeName, type: nodeType, parameters: nodeParameters },
+                inputData,
+                outputData
+            );
+
+            return reply.send({ success: true, suggestion });
+        } catch (err: any) {
+            return reply.status(500).send({
+                error: { code: 'AI_ERROR', message: err.message || 'Failed to analyze node' },
+            });
+        }
+    });
+
+    // ============================================
+    // APPLY FIX TO NODE
+    // ============================================
+    app.post<{
+        Body: {
+            credentialId: string;
+            workflowId: string;
+            nodeName: string;
+            suggestedParameters: Record<string, unknown>;
+        };
+    }>('/apply-fix', async (request, reply) => {
+        const { credentialId, workflowId, nodeName, suggestedParameters } = request.body;
+        const user = (request as AuthenticatedRequest).user!;
+
+        const credential = await prisma.n8nCredential.findFirst({
+            where: { id: credentialId, userId: user.id },
+        });
+
+        if (!credential) {
+            return reply.status(404).send({
+                error: { code: 'NOT_FOUND', message: 'Credential not found' },
+            });
+        }
+
+        try {
+            const n8n = N8nService.fromEncrypted(credential.instanceUrl, credential.apiKeyEncrypted);
+            const workflow = await n8n.getWorkflow(workflowId);
+
+            const nodes = workflow.nodes || [];
+            const nodeIndex = nodes.findIndex((n: any) => n.name === nodeName);
+
+            if (nodeIndex === -1) {
+                return reply.status(404).send({
+                    error: { code: 'NOT_FOUND', message: 'Node not found in workflow' },
+                });
+            }
+
+            nodes[nodeIndex].parameters = {
+                ...nodes[nodeIndex].parameters,
+                ...suggestedParameters,
+            };
+
+            const updatedWorkflow = await n8n.updateWorkflow(workflowId, { nodes });
+
+            return reply.send({
+                success: true,
+                message: `Applied fix to node "${nodeName}"`,
+                workflow: updatedWorkflow,
+            });
+        } catch (err: any) {
+            return reply.status(500).send({
+                error: { code: 'UPDATE_ERROR', message: err.message || 'Failed to apply fix' },
+            });
+        }
     });
 }

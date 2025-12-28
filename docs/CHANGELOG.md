@@ -4,6 +4,38 @@ All notable changes to the Ment MCP Platform will be documented in this file.
 
 ---
 
+## [2024-12-28] - AI Node Repair & Dedicated Executions Page
+
+### Added
+- **Dedicated Executions Page** at `/dashboard/workflows/[id]/executions`:
+  - Full-page view of workflow execution history
+  - Expandable execution cards with node-level details
+  - Input/Output/Error data for each node
+  - "View all" link on WorkflowCard
+
+- **AI Node Repair with Perplexity Integration**:
+  - 🔧 **Fix Button** - appears on nodes with errors
+  - ✨ **Improve Button** - appears on all nodes for optimization
+  - **Perplexity Deep Research** - automatically searches API documentation for HTTP Request errors
+  - **Anthropic Claude** - generates repair suggestions for all node types
+  - **Apply Fix** - one-click fix application to n8n workflow
+
+### Files Added
+- `frontend/src/app/dashboard/workflows/[id]/executions/page.tsx`
+- `frontend/src/components/workflows/AIRepairModal.tsx`
+- `backend/src/services/ai-repair.service.ts`
+- `backend/src/routes/ai-repair.routes.ts`
+
+### Files Modified
+- `frontend/src/components/workflows/WorkflowCard.tsx` - Added "View all" link
+- `frontend/src/lib/api.ts` - Added AI repair API functions
+- `backend/src/routes/ai.routes.ts` - Added repair/improve/apply-fix endpoints
+
+### Environment Variables Required
+- `PERPLEXITY_API_KEY` - For HTTP Request API documentation research
+
+---
+
 ## [2024-12-28] - Radical UI Rebuild: Onboarding & Workflow Management
 
 ### Added
