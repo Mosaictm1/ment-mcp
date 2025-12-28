@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/layout/Sidebar';
 import WorkflowCard from '@/components/workflows/WorkflowCard';
 import ExecuteWorkflowModal from '@/components/workflows/ExecuteWorkflowModal';
-import WorkflowDetailsModal from '@/components/workflows/WorkflowDetailsModal';
 import { getN8nCredentials, getWorkflows, executeWorkflow, getExecutions, Workflow, Execution } from '@/lib/api';
 import { RefreshCw, Server, Zap, Search, Filter, Plus } from 'lucide-react';
 
@@ -28,7 +27,6 @@ export default function WorkflowsPage() {
     const [loadingWorkflows, setLoadingWorkflows] = useState(false);
     const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
     const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
-    const [detailsWorkflow, setDetailsWorkflow] = useState<Workflow | null>(null);
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -258,7 +256,7 @@ export default function WorkflowsPage() {
                             {filteredWorkflows.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                     {filteredWorkflows.map((wf, index) => (
-                                        <div key={wf.id} onClick={() => setDetailsWorkflow(wf)} className="cursor-pointer">
+                                        <div key={wf.id} onClick={() => router.push(`/dashboard/workflows/${wf.id}/executions`)} className="cursor-pointer">
                                             <WorkflowCard
                                                 workflow={wf}
                                                 executions={executions[wf.id]}
@@ -301,19 +299,6 @@ export default function WorkflowsPage() {
                     instanceUrl={credentials.find(c => c.id === selectedCredId)?.instanceUrl || ''}
                     onClose={() => setSelectedWorkflow(null)}
                     onExecute={handleExecuteWorkflow}
-                />
-            )}
-
-            {/* Workflow Details Modal */}
-            {detailsWorkflow && (
-                <WorkflowDetailsModal
-                    workflow={detailsWorkflow}
-                    credentialId={selectedCredId}
-                    onClose={() => setDetailsWorkflow(null)}
-                    onExecute={() => {
-                        setDetailsWorkflow(null);
-                        setSelectedWorkflow(detailsWorkflow);
-                    }}
                 />
             )}
         </div>
