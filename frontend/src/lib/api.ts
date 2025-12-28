@@ -232,7 +232,19 @@ export async function getWorkflows(credentialId?: string) {
 
 export async function getWorkflow(id: string, credentialId?: string) {
     const params = credentialId ? `?credentialId=${credentialId}` : '';
-    return apiFetch<{ id: string; name: string; nodes: unknown[]; connections: unknown }>(
+    return apiFetch<{
+        id: string;
+        name: string;
+        active: boolean;
+        nodes: Array<{
+            id: string;
+            name: string;
+            type: string;
+            parameters?: Record<string, unknown>;
+            webhookId?: string;
+        }>;
+        connections: unknown;
+    }>(
         `/v1/n8n/workflows/${id}${params}`
     );
 }

@@ -14,6 +14,7 @@ interface Credential {
     id: string;
     name: string;
     status: string;
+    instanceUrl: string;
 }
 
 export default function WorkflowsPage() {
@@ -294,6 +295,8 @@ export default function WorkflowsPage() {
             {selectedWorkflow && (
                 <ExecuteWorkflowModal
                     workflow={selectedWorkflow}
+                    credentialId={selectedCredId}
+                    instanceUrl={credentials.find(c => c.id === selectedCredId)?.instanceUrl || ''}
                     onClose={() => setSelectedWorkflow(null)}
                     onExecute={handleExecuteWorkflow}
                 />

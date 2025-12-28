@@ -18,6 +18,7 @@ All notable changes to the Ment MCP Platform will be documented in this file.
   - `ExecuteWorkflowModal` with **dual-mode support**:
     - API Execute mode for self-hosted n8n
     - **Webhook mode for n8n Cloud** - paste your webhook URL to trigger workflows
+    - **Auto-detect Webhook URL** - automatically reads workflow nodes and extracts webhook path!
   - Search functionality for filtering workflows by name
   - Filter buttons (All/Active/Inactive)
   - Stats bar showing total/active/inactive counts
