@@ -15,7 +15,9 @@ All notable changes to the Ment MCP Platform will be documented in this file.
 
 - **Enhanced Workflows Page**:
   - New `WorkflowCard` component with animations and hover effects
-  - `ExecuteWorkflowModal` for running workflows with JSON input
+  - `ExecuteWorkflowModal` with **dual-mode support**:
+    - API Execute mode for self-hosted n8n
+    - **Webhook mode for n8n Cloud** - paste your webhook URL to trigger workflows
   - Search functionality for filtering workflows by name
   - Filter buttons (All/Active/Inactive)
   - Stats bar showing total/active/inactive counts
