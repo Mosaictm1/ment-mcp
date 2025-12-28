@@ -338,11 +338,15 @@ export interface ExecutionDetail {
             runData?: Record<string, Array<{
                 startTime: number;
                 executionTime: number;
+                inputData?: {
+                    main?: Array<Array<{ json: unknown }>>;
+                };
                 data: {
                     main: Array<Array<{ json: unknown }>>;
                 };
                 error?: { message: string };
             }>>;
+            error?: { message: string };
         };
     };
 }

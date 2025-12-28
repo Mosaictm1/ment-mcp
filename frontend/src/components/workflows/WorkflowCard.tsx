@@ -20,7 +20,7 @@ interface WorkflowCardProps {
     };
     executions?: Execution[];
     isRunning?: boolean;
-    onRun: () => void;
+    onRun: (e?: React.MouseEvent) => void;
     onToggle?: () => void;
     index?: number;
 }
