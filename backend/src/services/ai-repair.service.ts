@@ -1,5 +1,4 @@
 import axios from 'axios';
-import Anthropic from '@anthropic-ai/sdk';
 
 interface NodeData {
     name: string;
@@ -31,23 +30,17 @@ interface ImproveSuggestion {
 
 /**
  * AI Repair Service
- * Uses Perplexity for HTTP Request documentation research
- * Uses Anthropic for general node analysis and repair suggestions
+ * Uses Perplexity for HTTP Request documentation research AND fix generation
  */
 export class AIRepairService {
     private perplexityApiKey: string;
-    private anthropicApiKey: string;
-    private anthropic: Anthropic;
 
-    constructor(perplexityApiKey: string, anthropicApiKey: string) {
+    constructor(perplexityApiKey: string, _anthropicApiKey?: string) {
         this.perplexityApiKey = perplexityApiKey;
-        this.anthropicApiKey = anthropicApiKey;
-        this.anthropic = new Anthropic({ apiKey: anthropicApiKey });
     }
 
     /**
      * Repair a node with an error
-     * For HTTP Request nodes, uses Perplexity to research the API
      */
     async repairNode(node: NodeData, error: string, inputData?: unknown): Promise<RepairSuggestion> {
         const isHttpRequest = node.type.toLowerCase().includes('httprequest');
@@ -60,14 +53,13 @@ export class AIRepairService {
     }
 
     /**
-     * Repair HTTP Request node using Perplexity Deep Research
+     * Repair HTTP Request node using Perplexity
      */
     private async repairHttpRequestNode(node: NodeData, error: string, inputData?: unknown): Promise<RepairSuggestion> {
         const params = node.parameters as Record<string, any> || {};
         const url = params.url || '';
         const method = params.method || 'GET';
 
-        // Extract API domain for documentation search
         let domain = '';
         try {
             const urlObj = new URL(url);
@@ -76,176 +68,153 @@ export class AIRepairService {
             domain = url;
         }
 
-        // Use Perplexity to research the API
-        const perplexityResponse = await this.queryPerplexity(`
-            I'm getting this error when calling the ${domain} API:
-            
-            Error: ${error}
-            
-            URL: ${url}
-            Method: ${method}
-            ${params.headers ? `Headers: ${JSON.stringify(params.headers)}` : ''}
-            ${params.body ? `Body: ${JSON.stringify(params.body)}` : ''}
-            
-            Please search the official documentation for ${domain} and tell me:
-            1. What is the correct API endpoint format?
-            2. What authentication is required?
-            3. What are the required headers?
-            4. What is the correct request body format?
-            5. Common error codes and their solutions
-            
-            Focus on the official API documentation.
-        `);
+        const response = await this.queryPerplexity(`
+You are an n8n workflow expert and API troubleshooter.
 
-        // Use Anthropic to generate the fix
-        const fixResponse = await this.anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2000,
-            messages: [{
-                role: 'user',
-                content: `You are an n8n workflow expert. Based on this API documentation research and error message, suggest a fix.
+I'm getting this error when calling the ${domain} API in an n8n HTTP Request node:
 
-Node Type: ${node.type}
-Node Name: ${node.name}
-Current Parameters: ${JSON.stringify(params, null, 2)}
-Error: ${error}
+**Error:** ${error}
 
-API Documentation Research:
-${perplexityResponse}
+**Current Configuration:**
+- URL: ${url}
+- Method: ${method}
+${params.headers ? `- Headers: ${JSON.stringify(params.headers)}` : ''}
+${params.body ? `- Body: ${JSON.stringify(params.body)}` : ''}
 
-Respond with a JSON object containing:
+Please:
+1. Search the official ${domain} API documentation
+2. Identify what's wrong with my request
+3. Provide the correct parameters to fix this
+
+Respond with a JSON object (and ONLY the JSON, no markdown):
 {
-    "summary": "One-line summary of the fix",
-    "explanation": "Detailed explanation of what was wrong and how to fix it",
+    "summary": "One-line fix summary",
+    "explanation": "What was wrong and how to fix it",
     "suggestedFix": {
-        "parameters": { /* The corrected n8n node parameters */ }
+        "parameters": {
+            "url": "corrected URL if needed",
+            "method": "corrected method if needed",
+            "headers": { "corrected": "headers" },
+            "body": "corrected body if needed"
+        }
     },
     "confidence": "high" | "medium" | "low"
 }
-
-Only respond with valid JSON.`
-            }]
-        });
-
-        const textContent = fixResponse.content.find(c => c.type === 'text');
-        if (!textContent || textContent.type !== 'text') {
-            throw new Error('No text response from AI');
-        }
+        `);
 
         try {
-            const suggestion = JSON.parse(textContent.text);
-            suggestion.documentation = perplexityResponse;
-            return suggestion;
+            // Try to extract JSON from response
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                const suggestion = JSON.parse(jsonMatch[0]);
+                suggestion.documentation = response;
+                return suggestion;
+            }
         } catch {
-            return {
-                summary: 'Could not generate automatic fix',
-                explanation: perplexityResponse,
-                suggestedFix: {},
-                confidence: 'low'
-            };
+            // If parsing fails, return the response as explanation
         }
+
+        return {
+            summary: 'Analysis complete - review suggestions below',
+            explanation: response,
+            suggestedFix: {},
+            confidence: 'medium',
+            documentation: response
+        };
     }
 
     /**
-     * Repair generic (non-HTTP) node
+     * Repair generic node using Perplexity
      */
     private async repairGenericNode(node: NodeData, error: string, inputData?: unknown): Promise<RepairSuggestion> {
-        const response = await this.anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2000,
-            messages: [{
-                role: 'user',
-                content: `You are an n8n workflow expert. Analyze this node error and suggest a fix.
+        const response = await this.queryPerplexity(`
+You are an n8n workflow expert.
 
-Node Type: ${node.type}
-Node Name: ${node.name}
-Parameters: ${JSON.stringify(node.parameters, null, 2)}
-Error: ${error}
-${inputData ? `Input Data: ${JSON.stringify(inputData, null, 2)}` : ''}
+I have an n8n node with an error:
 
-Respond with a JSON object containing:
+**Node Type:** ${node.type}
+**Node Name:** ${node.name}
+**Parameters:** ${JSON.stringify(node.parameters, null, 2)}
+**Error:** ${error}
+${inputData ? `**Input Data:** ${JSON.stringify(inputData, null, 2)}` : ''}
+
+Please analyze this error and suggest a fix.
+
+Respond with a JSON object (and ONLY the JSON, no markdown):
 {
-    "summary": "One-line summary of the fix",
-    "explanation": "Detailed explanation of what was wrong and how to fix it",
+    "summary": "One-line fix summary",
+    "explanation": "What was wrong and how to fix it",
     "suggestedFix": {
-        "parameters": { /* The corrected n8n node parameters */ }
+        "parameters": { "corrected": "parameters" }
     },
     "confidence": "high" | "medium" | "low"
 }
-
-Only respond with valid JSON.`
-            }]
-        });
-
-        const textContent = response.content.find(c => c.type === 'text');
-        if (!textContent || textContent.type !== 'text') {
-            throw new Error('No text response from AI');
-        }
+        `);
 
         try {
-            return JSON.parse(textContent.text);
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
         } catch {
-            return {
-                summary: 'Could not parse AI response',
-                explanation: textContent.text,
-                suggestedFix: {},
-                confidence: 'low'
-            };
+            // If parsing fails, return the response as explanation
         }
+
+        return {
+            summary: 'Analysis complete',
+            explanation: response,
+            suggestedFix: {},
+            confidence: 'low'
+        };
     }
 
     /**
      * Suggest improvements for a node
      */
     async improveNode(node: NodeData, inputData?: unknown, outputData?: unknown): Promise<ImproveSuggestion> {
-        const response = await this.anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2000,
-            messages: [{
-                role: 'user',
-                content: `You are an n8n workflow optimization expert. Analyze this node and suggest improvements.
+        const response = await this.queryPerplexity(`
+You are an n8n workflow optimization expert.
 
-Node Type: ${node.type}
-Node Name: ${node.name}
-Parameters: ${JSON.stringify(node.parameters, null, 2)}
-${inputData ? `Input Data Sample: ${JSON.stringify(inputData, null, 2)}` : ''}
-${outputData ? `Output Data Sample: ${JSON.stringify(outputData, null, 2)}` : ''}
+Analyze this n8n node and suggest improvements:
 
-Respond with a JSON object containing:
+**Node Type:** ${node.type}
+**Node Name:** ${node.name}
+**Parameters:** ${JSON.stringify(node.parameters, null, 2)}
+${inputData ? `**Sample Input:** ${JSON.stringify(inputData, null, 2)}` : ''}
+${outputData ? `**Sample Output:** ${JSON.stringify(outputData, null, 2)}` : ''}
+
+Respond with a JSON object (and ONLY the JSON, no markdown):
 {
     "summary": "One-line summary of improvements",
     "improvements": [
         {
             "title": "Improvement title",
             "description": "What to improve and why",
-            "implementation": "How to implement it in n8n"
+            "implementation": "How to implement it"
         }
     ],
-    "performance": "Performance optimization tips if any",
+    "performance": "Performance tips if any",
     "security": "Security recommendations if any"
 }
-
-Only respond with valid JSON.`
-            }]
-        });
-
-        const textContent = response.content.find(c => c.type === 'text');
-        if (!textContent || textContent.type !== 'text') {
-            throw new Error('No text response from AI');
-        }
+        `);
 
         try {
-            return JSON.parse(textContent.text);
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
         } catch {
-            return {
-                summary: 'Could not parse AI response',
-                improvements: [{ title: 'Analysis', description: textContent.text }]
-            };
+            // If parsing fails, return the response as improvements
         }
+
+        return {
+            summary: 'Analysis complete',
+            improvements: [{ title: 'AI Analysis', description: response }]
+        };
     }
 
     /**
-     * Query Perplexity API for deep research
+     * Query Perplexity API
      */
     private async queryPerplexity(query: string): Promise<string> {
         try {
@@ -256,7 +225,7 @@ Only respond with valid JSON.`
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are an API documentation researcher. Search for official API documentation and provide accurate, detailed information about API endpoints, authentication, and usage.'
+                            content: 'You are an API documentation researcher and n8n workflow expert. Search for official documentation and provide accurate, detailed fixes. Always try to respond with valid JSON when asked.'
                         },
                         {
                             role: 'user',
@@ -278,7 +247,7 @@ Only respond with valid JSON.`
             return response.data.choices[0]?.message?.content || 'No response from Perplexity';
         } catch (error: any) {
             console.error('Perplexity API error:', error.response?.data || error.message);
-            return `Failed to query Perplexity: ${error.message}`;
+            throw new Error(`Perplexity API error: ${error.response?.data?.error?.message || error.message}`);
         }
     }
 }

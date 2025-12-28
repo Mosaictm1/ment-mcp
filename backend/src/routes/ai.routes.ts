@@ -296,9 +296,8 @@ export async function aiRoutes(app: FastifyInstance) {
         const { nodeName, nodeType, nodeParameters, error, inputData } = request.body;
 
         const perplexityKey = process.env.PERPLEXITY_API_KEY;
-        const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-        if (!perplexityKey || !anthropicKey) {
+        if (!perplexityKey) {
             return reply.status(500).send({
                 error: {
                     code: 'CONFIG_ERROR',
@@ -308,7 +307,7 @@ export async function aiRoutes(app: FastifyInstance) {
         }
 
         try {
-            const aiService = new AIRepairService(perplexityKey, anthropicKey);
+            const aiService = new AIRepairService(perplexityKey);
             const suggestion = await aiService.repairNode(
                 { name: nodeName, type: nodeType, parameters: nodeParameters },
                 error,
@@ -338,9 +337,8 @@ export async function aiRoutes(app: FastifyInstance) {
         const { nodeName, nodeType, nodeParameters, inputData, outputData } = request.body;
 
         const perplexityKey = process.env.PERPLEXITY_API_KEY;
-        const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-        if (!perplexityKey || !anthropicKey) {
+        if (!perplexityKey) {
             return reply.status(500).send({
                 error: {
                     code: 'CONFIG_ERROR',
@@ -350,7 +348,7 @@ export async function aiRoutes(app: FastifyInstance) {
         }
 
         try {
-            const aiService = new AIRepairService(perplexityKey, anthropicKey);
+            const aiService = new AIRepairService(perplexityKey);
             const suggestion = await aiService.improveNode(
                 { name: nodeName, type: nodeType, parameters: nodeParameters },
                 inputData,
