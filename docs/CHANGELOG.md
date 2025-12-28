@@ -4,6 +4,24 @@ All notable changes to the Ment MCP Platform will be documented in this file.
 
 ---
 
+## [2024-12-28] - Workflow Execution Fix
+
+### Fixed
+- **"Workflow executed! ID: N/A" - Workflows Not Actually Running**
+  - **Root Cause**: The n8n API response format wasn't being parsed correctly
+  - **Solution**: Updated `n8n.service.ts` executeWorkflow to:
+    - Use `POST /executions` as the primary endpoint
+    - Fall back to `POST /workflows/{id}/execute` for older n8n versions
+    - Handle multiple response formats from different n8n versions
+    - Properly extract execution ID from nested response data
+
+### Files Modified
+- `backend/src/services/n8n.service.ts`
+  - Added robust response parsing for execution results
+  - Added `executeWorkflowLegacy` fallback method
+
+---
+
 ## [2024-12-28] - API Response Format Fix
 
 ### Fixed

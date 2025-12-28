@@ -154,8 +154,48 @@ export class N8nService {
 
     /**
      * Execute workflow manually
+     * Uses POST /executions to run a workflow by ID
      */
     async executeWorkflow(
+        workflowId: string,
+        data?: Record<string, unknown>
+    ): Promise<WorkflowExecutionResult> {
+        try {
+            // n8n API: POST /executions with workflowId in body
+            const response = await this.client.post('/executions', {
+                workflowId,
+                data: data || {},
+            });
+
+            // n8n response can vary - handle multiple possible formats
+            const execData = response.data?.data || response.data;
+            const executionId = execData?.id || execData?.executionId || response.data?.id || 'unknown';
+            const finished = execData?.finished ?? response.data?.finished ?? false;
+            const status = finished ? 'success' : 'running';
+
+            return {
+                executionId: String(executionId),
+                status,
+                data: execData?.resultData || execData?.data || execData,
+            };
+        } catch (error: any) {
+            // Check if it's a 404 - endpoint might not exist, try alternative
+            if (error.response?.status === 404) {
+                return this.executeWorkflowLegacy(workflowId, data);
+            }
+            return {
+                executionId: '',
+                status: 'error',
+                error: error.response?.data?.message || error.message,
+            };
+        }
+    }
+
+    /**
+     * Legacy workflow execution using /workflows/{id}/execute
+     * Fallback for older n8n versions
+     */
+    private async executeWorkflowLegacy(
         workflowId: string,
         data?: Record<string, unknown>
     ): Promise<WorkflowExecutionResult> {
@@ -164,10 +204,13 @@ export class N8nService {
                 data: data || {},
             });
 
+            const execData = response.data?.data || response.data;
+            const executionId = execData?.id || execData?.executionId || response.data?.id || 'unknown';
+
             return {
-                executionId: response.data.executionId || response.data.id,
-                status: response.data.finished ? 'success' : 'running',
-                data: response.data.data,
+                executionId: String(executionId),
+                status: execData?.finished ? 'success' : 'running',
+                data: execData?.resultData || execData?.data || execData,
             };
         } catch (error: any) {
             return {
