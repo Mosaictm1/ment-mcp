@@ -369,6 +369,8 @@ export interface RepairSuggestion {
     };
     documentation?: string;
     confidence: 'high' | 'medium' | 'low';
+    service?: string;
+    researchSteps?: string[];
 }
 
 export interface ImproveSuggestion {
