@@ -324,3 +324,30 @@ export async function getExecutions(workflowId?: string, limit?: number, credent
 
     return apiFetch<{ data: Execution[] }>(`/v1/n8n/executions${queryString}`);
 }
+
+export interface ExecutionDetail {
+    id: string;
+    workflowId: string;
+    finished: boolean;
+    mode: string;
+    startedAt: string;
+    stoppedAt?: string;
+    status?: string;
+    data?: {
+        resultData?: {
+            runData?: Record<string, Array<{
+                startTime: number;
+                executionTime: number;
+                data: {
+                    main: Array<Array<{ json: unknown }>>;
+                };
+                error?: { message: string };
+            }>>;
+        };
+    };
+}
+
+export async function getExecution(executionId: string, credentialId?: string) {
+    const params = credentialId ? `?credentialId=${credentialId}` : '';
+    return apiFetch<ExecutionDetail>(`/v1/n8n/executions/${executionId}${params}`);
+}

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Loader2, CheckCircle2, AlertCircle, Webhook, Link2, Sparkles, ChevronDown, ChevronRight, Code2, ArrowRight } from 'lucide-react';
-import { getWorkflow } from '@/lib/api';
+import { X, Play, Loader2, CheckCircle2, AlertCircle, Webhook, Link2, Sparkles, ChevronDown, ChevronRight, Code2, RefreshCw, Clock } from 'lucide-react';
+import { getWorkflow, getExecution, getExecutions } from '@/lib/api';
 
 interface Workflow {
     id: string;
@@ -23,12 +23,12 @@ interface InputField {
     type: 'string' | 'number' | 'boolean' | 'json';
     required: boolean;
     description?: string;
-    default?: string;
 }
 
 interface NodeOutput {
     nodeName: string;
     nodeType: string;
+    executionTime?: number;
     data: unknown;
     error?: string;
 }
@@ -38,7 +38,7 @@ interface ExecuteWorkflowModalProps {
     credentialId: string;
     instanceUrl: string;
     onClose: () => void;
-    onExecute: (workflowId: string, data?: Record<string, unknown>) => Promise<{ success: boolean; executionId?: string; error?: string; data?: unknown }>;
+    onExecute: (workflowId: string, data?: Record<string, unknown>) => Promise<{ success: boolean; executionId?: string; error?: string }>;
 }
 
 export default function ExecuteWorkflowModal({ workflow, credentialId, instanceUrl, onClose, onExecute }: ExecuteWorkflowModalProps) {
@@ -46,6 +46,7 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
     const [useWebhook, setUseWebhook] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);
     const [isLoadingDetails, setIsLoadingDetails] = useState(true);
+    const [isLoadingOutputs, setIsLoadingOutputs] = useState(false);
     const [detectedWebhook, setDetectedWebhook] = useState<WebhookInfo | null>(null);
     const [inputFields, setInputFields] = useState<InputField[]>([]);
     const [inputValues, setInputValues] = useState<Record<string, string>>({});
@@ -65,7 +66,6 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                 if (res.data && res.data.nodes) {
                     const nodes = res.data.nodes as Array<{ id: string; name: string; type: string; parameters?: Record<string, any>; webhookId?: string }>;
 
-                    // Store nodes for output display
                     setWorkflowNodes(nodes.map(n => ({ id: n.id, name: n.name, type: n.type })));
 
                     // Look for Webhook nodes
@@ -84,83 +84,31 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                         const webhookPath = path.startsWith('/') ? path.slice(1) : path;
                         const fullUrl = `${cleanInstanceUrl}/webhook/${webhookPath}`;
 
-                        setDetectedWebhook({
-                            url: fullUrl,
-                            path: webhookPath,
-                            httpMethod
-                        });
+                        setDetectedWebhook({ url: fullUrl, path: webhookPath, httpMethod });
                         setWebhookUrl(fullUrl);
                         setUseWebhook(true);
-
-                        // Try to detect expected input fields from webhook configuration
-                        const detectedFields: InputField[] = [];
-
-                        // Check for defined body parameters or schema
-                        if (params.options?.rawBody === false || !params.options?.rawBody) {
-                            // Webhook expects JSON body, try to infer fields
-                            // Look at the next node to see what data it expects
-                            // For now, add common fields
-                        }
-
-                        // Check for query parameters setup
-                        if (params.responseMode === 'onReceived' || params.responseMode === 'lastNode') {
-                            // Standard webhook setup
-                        }
-
-                        setInputFields(detectedFields);
                     }
 
-                    // Look for Set node or Function node that might define inputs
-                    const setNode = nodes.find((node) =>
-                        node.type === 'n8n-nodes-base.set' ||
-                        node.type === 'n8n-nodes-base.code'
-                    );
+                    // Detect input fields from workflow
+                    const detectedInputs: InputField[] = [];
+                    const nodeStrings = JSON.stringify(nodes);
+                    const commonInputs = ['message', 'query', 'text', 'input', 'data', 'content', 'prompt', 'question'];
 
-                    if (setNode && setNode.parameters) {
-                        // Try to extract field definitions
-                        const fields: InputField[] = [];
-
-                        if (setNode.parameters.values) {
-                            const values = setNode.parameters.values as any;
-                            if (values.string) {
-                                values.string.forEach((v: any) => {
-                                    if (v.name && v.name.startsWith('$input.')) {
-                                        fields.push({
-                                            name: v.name.replace('$input.', ''),
-                                            type: 'string',
-                                            required: false
-                                        });
-                                    }
-                                });
-                            }
+                    commonInputs.forEach(inputName => {
+                        if (nodeStrings.includes(`"${inputName}"`) ||
+                            nodeStrings.includes(`$json.${inputName}`) ||
+                            nodeStrings.includes(`$json["${inputName}"]`)) {
+                            detectedInputs.push({
+                                name: inputName,
+                                type: 'string',
+                                required: false,
+                                description: `Input for ${inputName}`
+                            });
                         }
+                    });
 
-                        if (fields.length > 0) {
-                            setInputFields(fields);
-                        }
-                    }
-
-                    // If no fields detected, add some common ones
-                    if (inputFields.length === 0) {
-                        // Check if any node references specific input keys
-                        const nodeStrings = JSON.stringify(nodes);
-                        const commonInputs = ['message', 'query', 'text', 'input', 'data', 'content', 'prompt'];
-                        const detectedInputs: InputField[] = [];
-
-                        commonInputs.forEach(inputName => {
-                            if (nodeStrings.includes(`"${inputName}"`) || nodeStrings.includes(`$json.${inputName}`)) {
-                                detectedInputs.push({
-                                    name: inputName,
-                                    type: 'string',
-                                    required: false,
-                                    description: `Input for ${inputName}`
-                                });
-                            }
-                        });
-
-                        if (detectedInputs.length > 0) {
-                            setInputFields(detectedInputs);
-                        }
+                    if (detectedInputs.length > 0) {
+                        setInputFields(detectedInputs);
                     }
                 }
             } catch (error) {
@@ -188,7 +136,6 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
         const data: Record<string, unknown> = {};
         Object.entries(inputValues).forEach(([key, value]) => {
             if (value.trim()) {
-                // Try to parse as number or boolean
                 if (value === 'true') data[key] = true;
                 else if (value === 'false') data[key] = false;
                 else if (!isNaN(Number(value)) && value.trim() !== '') data[key] = Number(value);
@@ -196,6 +143,64 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
             }
         });
         return data;
+    };
+
+    // Fetch execution details to get node outputs
+    const fetchExecutionDetails = async (executionId: string) => {
+        setIsLoadingOutputs(true);
+        try {
+            const res = await getExecution(executionId, credentialId);
+            if (res.data && res.data.data?.resultData?.runData) {
+                const runData = res.data.data.resultData.runData;
+                const nodeOutputs: NodeOutput[] = [];
+
+                Object.entries(runData).forEach(([nodeName, runs]) => {
+                    if (runs && runs.length > 0) {
+                        const lastRun = runs[runs.length - 1];
+                        const outputData = lastRun.data?.main?.[0]?.[0]?.json || lastRun.data?.main?.[0];
+
+                        nodeOutputs.push({
+                            nodeName,
+                            nodeType: workflowNodes.find(n => n.name === nodeName)?.type || 'unknown',
+                            executionTime: lastRun.executionTime,
+                            data: outputData || lastRun.data,
+                            error: lastRun.error?.message
+                        });
+                    }
+                });
+
+                return nodeOutputs;
+            }
+        } catch (error) {
+            console.log('Failed to fetch execution details:', error);
+        } finally {
+            setIsLoadingOutputs(false);
+        }
+        return [];
+    };
+
+    // Poll for latest execution (for webhook triggers)
+    const pollForExecution = async (): Promise<NodeOutput[]> => {
+        setIsLoadingOutputs(true);
+
+        // Wait a bit for execution to complete
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        try {
+            // Get latest executions for this workflow
+            const res = await getExecutions(workflow.id, 1, credentialId);
+            if (res.data?.data && res.data.data.length > 0) {
+                const latestExec = res.data.data[0];
+                if (latestExec.id) {
+                    return await fetchExecutionDetails(latestExec.id);
+                }
+            }
+        } catch (error) {
+            console.log('Failed to poll executions:', error);
+        } finally {
+            setIsLoadingOutputs(false);
+        }
+        return [];
     };
 
     const handleExecute = async () => {
@@ -226,26 +231,22 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                 if (response.ok) {
                     const responseData = await response.json().catch(() => ({}));
 
-                    // Parse node outputs if available
-                    const nodeOutputs: NodeOutput[] = [];
-                    if (responseData && typeof responseData === 'object') {
-                        // If response contains execution data
-                        if (responseData.data) {
-                            Object.entries(responseData.data).forEach(([key, value]) => {
-                                nodeOutputs.push({
-                                    nodeName: key,
-                                    nodeType: 'output',
-                                    data: value
-                                });
-                            });
-                        } else {
-                            // The response itself is the output
-                            nodeOutputs.push({
-                                nodeName: 'Response',
-                                nodeType: 'webhook-response',
-                                data: responseData
-                            });
-                        }
+                    // Try to get node outputs from the response or poll for them
+                    let nodeOutputs: NodeOutput[] = [];
+
+                    // If webhook response contains data, show it
+                    if (responseData && Object.keys(responseData).length > 0) {
+                        nodeOutputs.push({
+                            nodeName: 'Webhook Response',
+                            nodeType: 'n8n-nodes-base.webhook',
+                            data: responseData
+                        });
+                    }
+
+                    // Also try to poll for execution details
+                    const executionOutputs = await pollForExecution();
+                    if (executionOutputs.length > 0) {
+                        nodeOutputs = executionOutputs;
                     }
 
                     setResult({
@@ -261,28 +262,30 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                 }
             } catch (error: any) {
                 if (error.message?.includes('Failed to fetch') || error.message?.includes('CORS')) {
+                    // CORS error - still try to get execution results
+                    const nodeOutputs = await pollForExecution();
                     setResult({
                         success: true,
                         executionId: 'webhook-sent',
-                        nodeOutputs: [{
-                            nodeName: 'Note',
-                            nodeType: 'info',
-                            data: 'Webhook was triggered but response could not be read due to CORS. Check n8n for execution details.'
-                        }]
+                        nodeOutputs
                     });
                 } else {
-                    setResult({
-                        success: false,
-                        error: error.message || 'Failed to call webhook'
-                    });
+                    setResult({ success: false, error: error.message || 'Failed to call webhook' });
                 }
             }
         } else {
             const execResult = await onExecute(workflow.id, data);
-            setResult(execResult);
 
-            if (!execResult.success && execResult.error?.includes('API execution')) {
-                setUseWebhook(true);
+            if (execResult.success && execResult.executionId && execResult.executionId !== 'unknown') {
+                // Wait for execution to complete and fetch details
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                const nodeOutputs = await fetchExecutionDetails(execResult.executionId);
+                setResult({ ...execResult, nodeOutputs });
+            } else {
+                setResult(execResult);
+                if (!execResult.success && execResult.error?.includes('API execution')) {
+                    setUseWebhook(true);
+                }
             }
         }
 
@@ -292,11 +295,8 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
     const toggleNodeExpand = (nodeName: string) => {
         setExpandedNodes(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(nodeName)) {
-                newSet.delete(nodeName);
-            } else {
-                newSet.add(nodeName);
-            }
+            if (newSet.has(nodeName)) newSet.delete(nodeName);
+            else newSet.add(nodeName);
             return newSet;
         });
     };
@@ -304,9 +304,16 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
     const renderNodeOutput = (output: NodeOutput, index: number) => {
         const isExpanded = expandedNodes.has(output.nodeName);
         const dataString = typeof output.data === 'object' ? JSON.stringify(output.data, null, 2) : String(output.data);
+        const nodeTypeShort = output.nodeType.split('.').pop() || output.nodeType;
 
         return (
-            <div key={index} className="border border-white/[0.06] rounded-xl overflow-hidden">
+            <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="border border-white/[0.06] rounded-xl overflow-hidden"
+            >
                 <button
                     onClick={() => toggleNodeExpand(output.nodeName)}
                     className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
@@ -322,7 +329,18 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                         </div>
                         <div className="text-left">
                             <p className="text-sm font-medium text-white">{output.nodeName}</p>
-                            <p className="text-xs text-white/40">{output.nodeType}</p>
+                            <div className="flex items-center gap-2 text-xs text-white/40">
+                                <span>{nodeTypeShort}</span>
+                                {output.executionTime !== undefined && (
+                                    <>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            {output.executionTime}ms
+                                        </span>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                     {isExpanded ? (
@@ -342,15 +360,21 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                             className="overflow-hidden"
                         >
                             <div className="px-4 pb-4">
-                                <pre className="p-3 rounded-lg text-xs font-mono overflow-x-auto max-h-48"
-                                    style={{ background: 'rgba(0, 0, 0, 0.3)', color: output.error ? '#f87171' : '#86efac' }}>
-                                    {dataString}
-                                </pre>
+                                {output.error ? (
+                                    <div className="p-3 rounded-lg text-sm text-red-400" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
+                                        {output.error}
+                                    </div>
+                                ) : (
+                                    <pre className="p-3 rounded-lg text-xs font-mono overflow-x-auto max-h-64"
+                                        style={{ background: 'rgba(0, 0, 0, 0.3)', color: '#86efac' }}>
+                                        {dataString}
+                                    </pre>
+                                )}
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
-            </div>
+            </motion.div>
         );
     };
 
@@ -377,7 +401,7 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                     }}
                 >
                     {/* Header */}
-                    <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between">
+                    <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between sticky top-0 z-10" style={{ background: 'inherit' }}>
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
                                 style={{ background: workflow.active ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255, 255, 255, 0.05)' }}>
@@ -385,7 +409,7 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                             </div>
                             <div>
                                 <h3 className="font-semibold text-white">{workflow.name}</h3>
-                                <p className="text-xs text-white/40">{workflowNodes.length} nodes · {workflow.active ? 'Active' : 'Inactive'}</p>
+                                <p className="text-xs text-white/40">{workflowNodes.length} nodes</p>
                             </div>
                         </div>
                         <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
@@ -398,7 +422,7 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                         {isLoadingDetails ? (
                             <div className="text-center py-8">
                                 <Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto mb-3" />
-                                <p className="text-sm text-white/40">Analyzing workflow configuration...</p>
+                                <p className="text-sm text-white/40">Analyzing workflow...</p>
                             </div>
                         ) : result ? (
                             <div className="py-4">
@@ -413,33 +437,46 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                                             >
                                                 <CheckCircle2 className="w-8 h-8 text-green-400" />
                                             </motion.div>
-                                            <h4 className="text-lg font-semibold text-white mb-1">
-                                                {useWebhook ? 'Webhook Triggered!' : 'Workflow Executed!'}
-                                            </h4>
-                                            <p className="text-sm text-white/50">
-                                                {result.executionId && result.executionId !== 'webhook-triggered' && result.executionId !== 'webhook-sent'
-                                                    ? `Execution ID: ${result.executionId}`
-                                                    : 'Workflow is running'}
-                                            </p>
+                                            <h4 className="text-lg font-semibold text-white mb-1">Execution Complete!</h4>
+                                            {result.executionId && result.executionId !== 'webhook-triggered' && result.executionId !== 'webhook-sent' && (
+                                                <p className="text-xs text-white/40">ID: {result.executionId}</p>
+                                            )}
                                         </div>
 
                                         {/* Node Outputs */}
-                                        {result.nodeOutputs && result.nodeOutputs.length > 0 && (
-                                            <div className="mt-6">
+                                        {isLoadingOutputs ? (
+                                            <div className="text-center py-8">
+                                                <Loader2 className="w-6 h-6 animate-spin text-blue-400 mx-auto mb-2" />
+                                                <p className="text-sm text-white/40">Loading node outputs...</p>
+                                            </div>
+                                        ) : result.nodeOutputs && result.nodeOutputs.length > 0 ? (
+                                            <div className="mt-4">
                                                 <h5 className="text-sm font-medium text-white/70 mb-3 flex items-center gap-2">
                                                     <Code2 className="w-4 h-4" />
-                                                    Response Data
+                                                    Node Outputs ({result.nodeOutputs.length})
                                                 </h5>
                                                 <div className="space-y-2">
                                                     {result.nodeOutputs.map((output, index) => renderNodeOutput(output, index))}
                                                 </div>
                                             </div>
+                                        ) : (
+                                            <div className="text-center py-4 text-white/30 text-sm">
+                                                No output data available
+                                            </div>
                                         )}
 
-                                        <div className="flex justify-center mt-6">
+                                        <div className="flex justify-center gap-3 mt-6">
+                                            <button
+                                                onClick={() => setResult(null)}
+                                                className="px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all hover:bg-white/10"
+                                                style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.7)' }}
+                                            >
+                                                <RefreshCw className="w-4 h-4" />
+                                                Run Again
+                                            </button>
                                             <button
                                                 onClick={onClose}
-                                                className="px-6 py-2.5 rounded-xl font-medium transition-all"
+                                                className="px-5 py-2.5 rounded-xl font-medium transition-all"
                                                 style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.7)' }}
                                             >
                                                 Close
@@ -480,152 +517,124 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                             </div>
                         ) : (
                             <>
-                                {/* Auto-detected Webhook Banner */}
+                                {/* Auto-detected Webhook */}
                                 {detectedWebhook && (
-                                    <div className="mb-5 p-4 rounded-xl"
+                                    <div className="mb-5 p-3 rounded-xl flex items-center gap-3"
                                         style={{ background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.15)' }}>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Sparkles className="w-4 h-4 text-green-400" />
-                                            <span className="text-sm font-medium text-green-400">Webhook Auto-Detected</span>
+                                        <Sparkles className="w-5 h-5 text-green-400" />
+                                        <div className="flex-1">
+                                            <span className="text-sm font-medium text-green-400">Webhook Detected</span>
+                                            <p className="text-xs text-green-300/60">{detectedWebhook.httpMethod} /{detectedWebhook.path}</p>
                                         </div>
-                                        <p className="text-xs text-green-300/70">
-                                            {detectedWebhook.httpMethod} {detectedWebhook.path}
-                                        </p>
                                     </div>
                                 )}
 
-                                {/* Execution Mode Toggle */}
-                                <div className="mb-5">
-                                    <div className="flex rounded-xl overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
-                                        <button
-                                            onClick={() => setUseWebhook(false)}
-                                            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!useWebhook ? 'bg-green-500/20 text-green-400' : 'text-white/40 hover:text-white/60'
-                                                }`}
-                                        >
-                                            <Play className="w-4 h-4" />
-                                            API
-                                        </button>
-                                        <button
-                                            onClick={() => setUseWebhook(true)}
-                                            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${useWebhook ? 'bg-blue-500/20 text-blue-400' : 'text-white/40 hover:text-white/60'
-                                                }`}
-                                        >
-                                            <Webhook className="w-4 h-4" />
-                                            Webhook
-                                            {detectedWebhook && <span className="w-1.5 h-1.5 rounded-full bg-green-400" />}
-                                        </button>
-                                    </div>
+                                {/* Mode Toggle */}
+                                <div className="flex rounded-xl overflow-hidden mb-5" style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                                    <button
+                                        onClick={() => setUseWebhook(false)}
+                                        className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!useWebhook ? 'bg-green-500/20 text-green-400' : 'text-white/40'
+                                            }`}
+                                    >
+                                        <Play className="w-4 h-4" />
+                                        API
+                                    </button>
+                                    <button
+                                        onClick={() => setUseWebhook(true)}
+                                        className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${useWebhook ? 'bg-blue-500/20 text-blue-400' : 'text-white/40'
+                                            }`}
+                                    >
+                                        <Webhook className="w-4 h-4" />
+                                        Webhook
+                                        {detectedWebhook && <span className="w-1.5 h-1.5 rounded-full bg-green-400" />}
+                                    </button>
                                 </div>
 
-                                {/* Webhook URL Input */}
+                                {/* Webhook URL */}
                                 {useWebhook && (
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium text-white/70 mb-2 flex items-center gap-2">
                                             <Link2 className="w-4 h-4" />
                                             Webhook URL
-                                            {detectedWebhook && (
-                                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400">
-                                                    Auto
-                                                </span>
-                                            )}
+                                            {detectedWebhook && <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400">Auto</span>}
                                         </label>
                                         <input
                                             type="url"
                                             value={webhookUrl}
                                             onChange={(e) => setWebhookUrl(e.target.value)}
-                                            placeholder="https://your-n8n.app.n8n.cloud/webhook/..."
+                                            placeholder="https://..."
                                             className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition-colors font-mono text-sm"
                                         />
                                     </div>
                                 )}
 
                                 {/* Input Mode Toggle */}
-                                <div className="flex items-center justify-between mb-4">
-                                    <label className="text-sm font-medium text-white/70">Input Data</label>
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="text-sm font-medium text-white/70">
+                                        Input {inputFields.length > 0 && `(${inputFields.length} fields detected)`}
+                                    </label>
                                     <button
                                         onClick={() => setUseJsonMode(!useJsonMode)}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                                        style={{ background: useJsonMode ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)', color: useJsonMode ? '#a78bfa' : 'rgba(255, 255, 255, 0.5)' }}
+                                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-colors"
+                                        style={{
+                                            background: useJsonMode ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                            color: useJsonMode ? '#a78bfa' : 'rgba(255, 255, 255, 0.5)'
+                                        }}
                                     >
-                                        <Code2 className="w-3.5 h-3.5" />
-                                        {useJsonMode ? 'JSON Mode' : 'Switch to JSON'}
+                                        <Code2 className="w-3 h-3" />
+                                        JSON
                                     </button>
                                 </div>
 
                                 {useJsonMode ? (
-                                    /* JSON Input Mode */
                                     <div className="mb-4">
                                         <textarea
                                             value={jsonInput}
                                             onChange={(e) => setJsonInput(e.target.value)}
                                             placeholder='{"key": "value"}'
-                                            rows={5}
+                                            rows={4}
                                             className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-white/30 focus:outline-none focus:border-green-500/50 transition-colors font-mono text-sm resize-none"
                                         />
                                         {parseError && <p className="mt-2 text-sm text-red-400">{parseError}</p>}
                                     </div>
                                 ) : (
-                                    /* Dynamic Input Fields */
-                                    <div className="space-y-4 mb-4">
+                                    <div className="space-y-3 mb-4">
                                         {inputFields.length > 0 ? (
                                             inputFields.map((field) => (
                                                 <div key={field.name}>
-                                                    <label className="block text-sm font-medium text-white/60 mb-2 capitalize">
+                                                    <label className="block text-xs font-medium text-white/50 mb-1.5 capitalize">
                                                         {field.name.replace(/_/g, ' ')}
                                                         {field.required && <span className="text-red-400 ml-1">*</span>}
                                                     </label>
-                                                    {field.type === 'boolean' ? (
-                                                        <select
-                                                            value={inputValues[field.name] || ''}
-                                                            onChange={(e) => handleInputChange(field.name, e.target.value)}
-                                                            className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white focus:outline-none focus:border-green-500/50 transition-colors"
-                                                        >
-                                                            <option value="" className="bg-[#0a0a0f]">Select...</option>
-                                                            <option value="true" className="bg-[#0a0a0f]">True</option>
-                                                            <option value="false" className="bg-[#0a0a0f]">False</option>
-                                                        </select>
-                                                    ) : (
-                                                        <input
-                                                            type={field.type === 'number' ? 'number' : 'text'}
-                                                            value={inputValues[field.name] || ''}
-                                                            onChange={(e) => handleInputChange(field.name, e.target.value)}
-                                                            placeholder={field.description || `Enter ${field.name}...`}
-                                                            className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-white/30 focus:outline-none focus:border-green-500/50 transition-colors"
-                                                        />
-                                                    )}
+                                                    <input
+                                                        type="text"
+                                                        value={inputValues[field.name] || ''}
+                                                        onChange={(e) => handleInputChange(field.name, e.target.value)}
+                                                        placeholder={field.description || `Enter ${field.name}...`}
+                                                        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-white/30 focus:outline-none focus:border-green-500/50 transition-colors text-sm"
+                                                    />
                                                 </div>
                                             ))
                                         ) : (
-                                            /* Default single input field */
-                                            <>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-white/60 mb-2">
-                                                        Message / Input
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={inputValues['message'] || ''}
-                                                        onChange={(e) => handleInputChange('message', e.target.value)}
-                                                        placeholder="Enter your message or input..."
-                                                        className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-white/30 focus:outline-none focus:border-green-500/50 transition-colors"
-                                                    />
-                                                </div>
-                                                <p className="text-xs text-white/30">
-                                                    💡 Tip: Switch to JSON mode for complex inputs
-                                                </p>
-                                            </>
+                                            <div>
+                                                <label className="block text-xs font-medium text-white/50 mb-1.5">Message / Input</label>
+                                                <input
+                                                    type="text"
+                                                    value={inputValues['message'] || ''}
+                                                    onChange={(e) => handleInputChange('message', e.target.value)}
+                                                    placeholder="Enter your input..."
+                                                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-white/30 focus:outline-none focus:border-green-500/50 transition-colors text-sm"
+                                                />
+                                            </div>
                                         )}
                                     </div>
                                 )}
 
                                 {!workflow.active && (
-                                    <div className="mb-4 p-4 rounded-xl flex items-start gap-3"
+                                    <div className="p-3 rounded-xl flex items-center gap-3 mb-4"
                                         style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.15)' }}>
-                                        <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-                                        <div>
-                                            <p className="text-sm text-yellow-400">Workflow is inactive</p>
-                                            <p className="text-xs text-yellow-400/60">Activate in n8n to enable triggers</p>
-                                        </div>
+                                        <AlertCircle className="w-5 h-5 text-yellow-500" />
+                                        <span className="text-sm text-yellow-400">Workflow is inactive</span>
                                     </div>
                                 )}
                             </>
@@ -637,7 +646,7 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                         <div className="px-6 py-4 border-t border-white/[0.06] flex gap-3">
                             <button
                                 onClick={onClose}
-                                className="flex-1 py-3 px-6 rounded-xl font-medium transition-colors"
+                                className="flex-1 py-3 rounded-xl font-medium transition-colors"
                                 style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.6)' }}
                             >
                                 Cancel
@@ -645,14 +654,10 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                             <button
                                 onClick={handleExecute}
                                 disabled={isExecuting || (useWebhook && !webhookUrl)}
-                                className="flex-1 py-3 px-6 rounded-xl font-medium text-white transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
+                                className="flex-1 py-3 rounded-xl font-medium text-white transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
                                 style={{
-                                    background: useWebhook
-                                        ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
-                                        : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                                    boxShadow: useWebhook
-                                        ? '0 4px 20px rgba(59, 130, 246, 0.3)'
-                                        : '0 4px 20px rgba(34, 197, 94, 0.3)'
+                                    background: useWebhook ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                    boxShadow: useWebhook ? '0 4px 20px rgba(59, 130, 246, 0.3)' : '0 4px 20px rgba(34, 197, 94, 0.3)'
                                 }}
                             >
                                 {isExecuting ? (
@@ -662,8 +667,8 @@ export default function ExecuteWorkflowModal({ workflow, credentialId, instanceU
                                     </>
                                 ) : (
                                     <>
-                                        {useWebhook ? <Webhook className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                                        {useWebhook ? 'Trigger' : 'Execute'}
+                                        <Play className="w-5 h-5" />
+                                        Execute
                                     </>
                                 )}
                             </button>

@@ -271,6 +271,37 @@ export async function n8nRoutes(app: FastifyInstance) {
     });
 
     // ============================================
+    // GET /n8n/executions/:id
+    // Get single execution with full node data
+    // ============================================
+    app.get<{ Params: { id: string }; Querystring: { credentialId?: string } }>('/executions/:id', async (request, reply) => {
+        const { id } = request.params;
+        const { credentialId } = request.query;
+        const n8n = await getN8nService(request.user.id, credentialId);
+
+        if (!n8n) {
+            return reply.status(400).send({
+                error: {
+                    code: 'NO_CREDENTIAL',
+                    message: 'No n8n credentials configured',
+                },
+            });
+        }
+
+        try {
+            const execution = await n8n.getExecution(id);
+            return reply.send(execution);
+        } catch (error) {
+            return reply.status(502).send({
+                error: {
+                    code: 'N8N_ERROR',
+                    message: error instanceof Error ? error.message : 'Failed to fetch execution',
+                },
+            });
+        }
+    });
+
+    // ============================================
     // POST /n8n/workflows/:id/execute
     // ============================================
     app.post<{ Params: { id: string }; Body: { data?: Record<string, unknown>; credentialId?: string } }>('/workflows/:id/execute', async (request, reply) => {
