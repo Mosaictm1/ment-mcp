@@ -21,6 +21,7 @@ interface NodeRun {
     inputData?: unknown;
     outputData?: unknown;
     error?: string;
+    nodeParameters?: Record<string, unknown>;
 }
 
 interface ExecutionDetail {
@@ -37,7 +38,7 @@ interface Workflow {
     id: string;
     name: string;
     active: boolean;
-    nodes?: Array<{ id: string; name: string; type: string }>;
+    nodes?: Array<{ id: string; name: string; type: string; parameters?: Record<string, unknown> }>;
 }
 
 export default function ExecutionsPage() {
@@ -112,13 +113,17 @@ export default function ExecutionsPage() {
                                         const inputItems = run.inputData?.main?.[0] || [];
                                         const outputItems = run.data?.main?.[0] || [];
 
+                                        // Get node parameters from workflow definition (includes URL, headers, etc)
+                                        const nodeFromWorkflow = wfRes.data?.nodes?.find((n: any) => n.name === nodeName);
+
                                         nodeRuns.push({
                                             nodeName,
-                                            nodeType: wfRes.data?.nodes?.find((n: any) => n.name === nodeName)?.type || 'unknown',
+                                            nodeType: nodeFromWorkflow?.type || 'unknown',
                                             executionTime: run.executionTime || 0,
                                             inputData: inputItems.length > 0 ? inputItems.map((i: any) => i.json) : undefined,
                                             outputData: outputItems.length > 0 ? outputItems.map((i: any) => i.json) : undefined,
-                                            error: run.error?.message
+                                            error: run.error?.message,
+                                            nodeParameters: nodeFromWorkflow?.parameters
                                         });
                                     }
                                 });
@@ -460,6 +465,7 @@ export default function ExecutionsPage() {
                         node={{
                             nodeName: aiModalNode.nodeName,
                             nodeType: aiModalNode.nodeType,
+                            nodeParameters: aiModalNode.nodeParameters,
                             inputData: aiModalNode.inputData,
                             outputData: aiModalNode.outputData,
                             error: aiModalNode.error
