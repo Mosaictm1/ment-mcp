@@ -101,9 +101,15 @@ export class N8nService {
 
     /**
      * Update existing workflow
+     * Note: n8n API requires PUT for workflow updates, not PATCH
      */
     async updateWorkflow(workflowId: string, updates: Partial<N8nWorkflow>): Promise<N8nWorkflow> {
-        const response = await this.client.patch(`/workflows/${workflowId}`, updates);
+        // First get the full workflow to merge with updates
+        const currentWorkflow = await this.getWorkflow(workflowId);
+        const mergedWorkflow = { ...currentWorkflow, ...updates };
+
+        // Use PUT to update the workflow
+        const response = await this.client.put(`/workflows/${workflowId}`, mergedWorkflow);
         return response.data;
     }
 
