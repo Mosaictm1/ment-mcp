@@ -155,13 +155,14 @@ export default function HttpBuilderPage() {
             });
 
             const data = await res.json();
-            if (data.success && data.data.analysis) {
+            if (data.success && data.data?.analysis) {
                 setAnalysis(data.data.analysis);
             } else {
-                setError(data.error || 'Analysis failed');
+                const errorMsg = data.error?.message || data.error || 'Analysis failed';
+                setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
             }
         } catch (e: any) {
-            setError(e.message);
+            setError(e.message || 'An error occurred');
         }
         setAnalyzing(false);
     };
@@ -195,10 +196,11 @@ export default function HttpBuilderPage() {
             if (data.success) {
                 setBuildResult(data.data);
             } else {
-                setError(data.error || 'Fix failed');
+                const errorMsg = data.error?.message || data.error || 'Fix failed';
+                setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
             }
         } catch (e: any) {
-            setError(e.message);
+            setError(e.message || 'An error occurred');
         }
         setFixing(null);
     };
@@ -227,10 +229,11 @@ export default function HttpBuilderPage() {
             if (data.success) {
                 setBuildResult(data.data);
             } else {
-                setError(data.error || 'Build failed');
+                const errorMsg = data.error?.message || data.error || 'Build failed';
+                setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
             }
         } catch (e: any) {
-            setError(e.message);
+            setError(e.message || 'An error occurred');
         }
         setBuilding(false);
     };
@@ -263,10 +266,11 @@ export default function HttpBuilderPage() {
                 analyzeWorkflow(selectedWorkflow);
                 setBuildResult(null);
             } else {
-                setError(data.error || 'Apply failed');
+                const errorMsg = data.error?.message || data.error || 'Apply failed';
+                setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
             }
         } catch (e: any) {
-            setError(e.message);
+            setError(e.message || 'An error occurred');
         }
     };
 
@@ -331,8 +335,8 @@ export default function HttpBuilderPage() {
                         <button
                             onClick={() => setActiveTab('analyze')}
                             className={`px-6 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'analyze'
-                                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                                    : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+                                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                : 'text-white/40 hover:text-white/60 hover:bg-white/5'
                                 }`}
                         >
                             <span className="flex items-center gap-2">
@@ -343,8 +347,8 @@ export default function HttpBuilderPage() {
                         <button
                             onClick={() => setActiveTab('build')}
                             className={`px-6 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'build'
-                                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                                    : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                                : 'text-white/40 hover:text-white/60 hover:bg-white/5'
                                 }`}
                         >
                             <span className="flex items-center gap-2">
@@ -386,8 +390,8 @@ export default function HttpBuilderPage() {
                                                 onClick={() => analyzeWorkflow(wf)}
                                                 disabled={analyzing}
                                                 className={`w-full p-4 rounded-xl text-left transition-all ${selectedWorkflow?.id === wf.id
-                                                        ? 'bg-purple-500/20 border border-purple-500/30'
-                                                        : 'bg-white/5 hover:bg-white/10 border border-transparent'
+                                                    ? 'bg-purple-500/20 border border-purple-500/30'
+                                                    : 'bg-white/5 hover:bg-white/10 border border-transparent'
                                                     }`}
                                             >
                                                 <div className="flex items-center justify-between">
@@ -449,8 +453,8 @@ export default function HttpBuilderPage() {
                                             {analysis.httpNodes.length > 0 ? (
                                                 analysis.httpNodes.map((node, i) => (
                                                     <div key={i} className={`p-4 rounded-xl border ${node.status === 'error'
-                                                            ? 'bg-red-500/10 border-red-500/30'
-                                                            : 'bg-white/5 border-transparent'
+                                                        ? 'bg-red-500/10 border-red-500/30'
+                                                        : 'bg-white/5 border-transparent'
                                                         }`}>
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
