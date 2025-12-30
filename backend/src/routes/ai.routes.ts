@@ -1,8 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../lib/prisma.js';
 import { AIConversationService, ConversationContext } from '../services/ai-conversation.service.js';
-import { AIRepairService } from '../services/ai-repair.service.js';
+import { HttpNodeBuilderAgent } from '../services/ai-repair.service.js';
 import { N8nService } from '../services/n8n.service.js';
+
 
 interface AuthenticatedRequest {
     user?: {
@@ -307,8 +308,8 @@ export async function aiRoutes(app: FastifyInstance) {
         }
 
         try {
-            const aiService = new AIRepairService(perplexityKey);
-            const suggestion = await aiService.repairNode(
+            const aiService = new HttpNodeBuilderAgent(perplexityKey);
+            const suggestion = await aiService.fixHttpNode(
                 { name: nodeName, type: nodeType, parameters: nodeParameters },
                 error,
                 inputData
@@ -348,12 +349,9 @@ export async function aiRoutes(app: FastifyInstance) {
         }
 
         try {
-            const aiService = new AIRepairService(perplexityKey);
-            const suggestion = await aiService.improveNode(
-                { name: nodeName, type: nodeType, parameters: nodeParameters },
-                inputData,
-                outputData
-            );
+            const aiService = new HttpNodeBuilderAgent(perplexityKey);
+            const url = (nodeParameters?.url as string) || '';
+            const suggestion = await aiService.buildHttpNode(`Improve ${nodeType} node for ${url}`);
 
             return reply.send({ success: true, suggestion });
         } catch (err: any) {

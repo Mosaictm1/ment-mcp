@@ -12,6 +12,7 @@ import { userRoutes } from './routes/user.routes.js';
 import { n8nRoutes } from './routes/n8n.routes.js';
 import { mcpRoutes } from './routes/mcp.routes.js';
 import { aiRoutes } from './routes/ai.routes.js';
+import { httpBuilderRoutes } from './routes/http-builder.routes.js';
 
 async function bootstrap() {
     const app = Fastify({
@@ -67,6 +68,8 @@ async function bootstrap() {
     await app.register(n8nRoutes, { prefix: '/v1/n8n' });
     await app.register(mcpRoutes, { prefix: '/v1/mcp' });
     await app.register(aiRoutes, { prefix: '/v1/ai' });
+    await app.register(httpBuilderRoutes, { prefix: '/v1/http-builder' });
+
 
     // ============================================
     // ERROR HANDLING

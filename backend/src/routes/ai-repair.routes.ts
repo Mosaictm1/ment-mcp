@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { AIRepairService } from '../services/ai-repair.service.js';
+import { HttpNodeBuilderAgent } from '../services/ai-repair.service.js';
 import { N8nService } from '../services/n8n.service.js';
 import { prisma } from '../lib/prisma.js';
 
@@ -49,21 +49,20 @@ export default async function aiRepairRoutes(app: FastifyInstance) {
 
         // Get API keys from environment
         const perplexityKey = process.env.PERPLEXITY_API_KEY;
-        const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-        if (!perplexityKey || !anthropicKey) {
+        if (!perplexityKey) {
             return reply.status(500).send({
                 error: {
                     code: 'CONFIG_ERROR',
-                    message: 'AI repair service not configured. Missing API keys.'
+                    message: 'AI repair service not configured. Missing PERPLEXITY_API_KEY.'
                 }
             });
         }
 
         try {
-            const aiService = new AIRepairService(perplexityKey, anthropicKey);
+            const aiService = new HttpNodeBuilderAgent(perplexityKey);
 
-            const suggestion = await aiService.repairNode(
+            const suggestion = await aiService.fixHttpNode(
                 { name: nodeName, type: nodeType, parameters: nodeParameters },
                 error,
                 inputData
@@ -86,31 +85,28 @@ export default async function aiRepairRoutes(app: FastifyInstance) {
 
     /**
      * POST /v1/ai/improve
-     * Suggest improvements for a node
+     * Suggest improvements for a node - redirects to build
      */
     app.post<{ Body: ImproveBody }>('/improve', async (request, reply) => {
-        const { nodeName, nodeType, nodeParameters, inputData, outputData } = request.body;
+        const { nodeName, nodeType, nodeParameters } = request.body;
 
         const perplexityKey = process.env.PERPLEXITY_API_KEY;
-        const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-        if (!perplexityKey || !anthropicKey) {
+        if (!perplexityKey) {
             return reply.status(500).send({
                 error: {
                     code: 'CONFIG_ERROR',
-                    message: 'AI improve service not configured. Missing API keys.'
+                    message: 'AI service not configured. Missing PERPLEXITY_API_KEY.'
                 }
             });
         }
 
         try {
-            const aiService = new AIRepairService(perplexityKey, anthropicKey);
+            const aiService = new HttpNodeBuilderAgent(perplexityKey);
 
-            const suggestion = await aiService.improveNode(
-                { name: nodeName, type: nodeType, parameters: nodeParameters },
-                inputData,
-                outputData
-            );
+            // Use build to analyze and suggest improvements
+            const url = (nodeParameters?.url as string) || '';
+            const suggestion = await aiService.buildHttpNode(`Improve ${nodeType} node for ${url}`);
 
             return reply.send({
                 success: true,
@@ -126,6 +122,7 @@ export default async function aiRepairRoutes(app: FastifyInstance) {
             });
         }
     });
+
 
     /**
      * POST /v1/ai/apply-fix

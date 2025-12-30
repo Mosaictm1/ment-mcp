@@ -1,89 +1,261 @@
 import axios from 'axios';
 
-interface NodeData {
-    name: string;
-    type: string;
-    parameters?: Record<string, unknown>;
+/**
+ * HTTP Node Builder Agent
+ * 
+ * A specialized AI agent for building and repairing n8n HTTP Request nodes.
+ * Uses Perplexity's sonar-reasoning-pro for deep documentation research.
+ * 
+ * Workflow:
+ * 1. UNDERSTAND - Parse user request or error
+ * 2. IDENTIFY - Determine the target API service
+ * 3. RESEARCH - Search official documentation
+ * 4. GENERATE - Create n8n-compatible node configuration
+ */
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface HttpNodeConfig {
+    url: string;
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+    headers?: Record<string, string>;
+    queryParameters?: Record<string, string>;
+    body?: unknown;
+    authentication?: {
+        type: 'none' | 'bearer' | 'apiKey' | 'basicAuth';
+        value?: string;
+        headerName?: string;
+    };
 }
 
-interface WorkflowContext {
-    workflowName?: string;
-    previousNodes?: Array<{ name: string; type: string }>;
-    expectedOutput?: string;
+export interface NodeAnalysis {
+    nodeName: string;
+    nodeType: string;
+    isHttpRequest: boolean;
+    status: 'success' | 'error' | 'pending';
+    errorMessage?: string;
+    inputData?: unknown;
+    outputData?: unknown;
+    suggestedFix?: BuildResult;
 }
 
-interface RepairSuggestion {
+export interface BuildResult {
+    success: boolean;
+    service: string;
     summary: string;
     explanation: string;
-    suggestedFix: {
-        parameters?: Record<string, unknown>;
-        code?: string;
-    };
-    documentation?: string;
+    nodeConfig: HttpNodeConfig;
+    curlCommand: string;
+    documentationUrl?: string;
+    researchSteps: string[];
     confidence: 'high' | 'medium' | 'low';
-    service?: string;
-    researchSteps?: string[];
 }
 
-interface ImproveSuggestion {
-    summary: string;
-    improvements: Array<{
-        title: string;
-        description: string;
-        implementation?: string;
-    }>;
-    performance?: string;
-    security?: string;
+export interface WorkflowAnalysis {
+    workflowId: string;
+    workflowName: string;
+    totalNodes: number;
+    httpNodes: NodeAnalysis[];
+    errorNodes: NodeAnalysis[];
+    successRate: number;
 }
 
-/**
- * AI Repair Service - Deep Research Mode
- * Uses Perplexity with multi-step research:
- * 1. Read full node JSON
- * 2. Identify the service/platform
- * 3. Deep research in service docs
- * 4. Generate and apply fix
- */
-export class AIRepairService {
+// ============================================
+// HTTP NODE BUILDER AGENT
+// ============================================
+
+export class HttpNodeBuilderAgent {
     private perplexityApiKey: string;
 
-    constructor(perplexityApiKey: string, _anthropicApiKey?: string) {
+    constructor(perplexityApiKey: string) {
         this.perplexityApiKey = perplexityApiKey;
     }
 
+    // ============================================
+    // MAIN CAPABILITIES
+    // ============================================
+
     /**
-     * Step 1: Extract full node context
+     * BUILD: Create a new HTTP node from a description
+     * 
+     * Example: "Create a Stripe API call to list all customers"
      */
-    private extractNodeContext(node: NodeData): {
-        fullJson: string;
-        url?: string;
-        method?: string;
-        headers?: Record<string, string>;
-        body?: unknown;
-        authType?: string;
-    } {
-        const params = node.parameters as Record<string, any> || {};
+    async buildHttpNode(description: string): Promise<BuildResult> {
+        console.log(`[HTTP Agent] Building new node from description: "${description}"`);
+
+        // Step 1: Understand what the user wants
+        const intent = await this.parseUserIntent(description);
+        console.log(`[HTTP Agent] Identified intent:`, intent);
+
+        // Step 2: Research the API documentation
+        const research = await this.researchApiDocumentation(
+            intent.service,
+            intent.endpoint,
+            intent.action
+        );
+        console.log(`[HTTP Agent] Research complete for ${intent.service}`);
+
+        // Step 3: Generate the node configuration
+        const config = await this.generateNodeConfig(intent, research);
+        console.log(`[HTTP Agent] Generated config with confidence: ${config.confidence}`);
+
+        return config;
+    }
+
+    /**
+     * FIX: Repair a broken HTTP node based on error message
+     */
+    async fixHttpNode(
+        node: { name: string; type: string; parameters?: Record<string, unknown> },
+        errorMessage: string,
+        inputData?: unknown
+    ): Promise<BuildResult> {
+        console.log(`[HTTP Agent] Fixing node "${node.name}" with error: ${errorMessage}`);
+
+        // Extract current configuration
+        const currentConfig = this.extractNodeConfig(node);
+
+        // Identify the service from URL
+        const service = await this.identifyService(currentConfig.url || '');
+        console.log(`[HTTP Agent] Identified service: ${service.name}`);
+
+        // Research the correct configuration
+        const research = await this.researchForFix(
+            service.name,
+            currentConfig,
+            errorMessage,
+            inputData
+        );
+
+        // Generate the fix
+        const fix = await this.generateFix(service.name, currentConfig, research, errorMessage);
+
+        return fix;
+    }
+
+    /**
+     * ANALYZE: Analyze a workflow and identify HTTP nodes with issues
+     */
+    async analyzeWorkflow(
+        workflow: { id: string; name: string; nodes?: any[] },
+        executionData?: { resultData?: { runData?: Record<string, any[]> } }
+    ): Promise<WorkflowAnalysis> {
+        const nodes = workflow.nodes || [];
+        const runData = executionData?.resultData?.runData || {};
+
+        const httpNodes: NodeAnalysis[] = [];
+        const errorNodes: NodeAnalysis[] = [];
+
+        for (const node of nodes) {
+            const isHttpRequest = node.type === 'n8n-nodes-base.httpRequest';
+            const nodeRunData = runData[node.name];
+
+            let status: 'success' | 'error' | 'pending' = 'pending';
+            let errorMessage: string | undefined;
+            let inputData: unknown;
+            let outputData: unknown;
+
+            if (nodeRunData && nodeRunData.length > 0) {
+                const lastRun = nodeRunData[nodeRunData.length - 1];
+
+                if (lastRun.error) {
+                    status = 'error';
+                    errorMessage = lastRun.error.message || JSON.stringify(lastRun.error);
+                } else {
+                    status = 'success';
+                }
+
+                inputData = lastRun.inputData;
+                outputData = lastRun.data?.main?.[0] || lastRun.data;
+            }
+
+            const analysis: NodeAnalysis = {
+                nodeName: node.name,
+                nodeType: node.type,
+                isHttpRequest,
+                status,
+                errorMessage,
+                inputData,
+                outputData
+            };
+
+            if (isHttpRequest) {
+                httpNodes.push(analysis);
+            }
+
+            if (status === 'error') {
+                errorNodes.push(analysis);
+            }
+        }
+
+        const successCount = httpNodes.filter(n => n.status === 'success').length;
+        const successRate = httpNodes.length > 0 ? (successCount / httpNodes.length) * 100 : 100;
 
         return {
-            fullJson: JSON.stringify(node, null, 2),
-            url: params.url || params.requestUrl || '',
-            method: params.method || params.requestMethod || 'GET',
-            headers: params.headers || params.headerParameters || {},
-            body: params.body || params.bodyParameters || params.jsonBody,
-            authType: params.authentication || params.authenticationMethod
+            workflowId: workflow.id,
+            workflowName: workflow.name,
+            totalNodes: nodes.length,
+            httpNodes,
+            errorNodes,
+            successRate
+        };
+    }
+
+    // ============================================
+    // INTERNAL METHODS
+    // ============================================
+
+    /**
+     * Parse user intent from natural language description
+     */
+    private async parseUserIntent(description: string): Promise<{
+        service: string;
+        endpoint: string;
+        action: string;
+        details: string;
+    }> {
+        const prompt = `
+أنت محلل طلبات API. حلل الطلب التالي واستخرج المعلومات:
+
+الطلب: "${description}"
+
+أجب بـ JSON فقط (بدون markdown):
+{
+    "service": "اسم الخدمة (مثل Stripe, Notion, OpenAI)",
+    "endpoint": "الـ endpoint المطلوب (مثل /customers, /pages)",
+    "action": "الإجراء المطلوب (مثل list, create, update, delete)",
+    "details": "أي تفاصيل إضافية"
+}
+        `;
+
+        const response = await this.queryPerplexity(prompt, true);
+
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+        } catch (e) {
+            console.error('[HTTP Agent] Failed to parse intent:', e);
+        }
+
+        // Fallback: extract service name from description
+        return {
+            service: 'Unknown API',
+            endpoint: '/api',
+            action: 'request',
+            details: description
         };
     }
 
     /**
-     * Step 2: Identify the service/platform from URL
+     * Identify service from URL
      */
-    private async identifyService(url: string): Promise<{
-        serviceName: string;
-        domain: string;
-        apiType: string;
-    }> {
+    private async identifyService(url: string): Promise<{ name: string; domain: string }> {
         if (!url) {
-            return { serviceName: 'Unknown', domain: '', apiType: 'REST' };
+            return { name: 'Unknown', domain: '' };
         }
 
         let domain = '';
@@ -94,315 +266,280 @@ export class AIRepairService {
             domain = url;
         }
 
-        // Common API patterns
+        // Known services mapping
         const knownServices: Record<string, string> = {
-            'api.openai.com': 'OpenAI',
-            'api.anthropic.com': 'Anthropic',
-            'graph.facebook.com': 'Facebook Graph API',
-            'latenode.com': 'LateNode',
-            'api.twitter.com': 'Twitter API',
+            'api.openai.com': 'OpenAI API',
+            'api.anthropic.com': 'Anthropic API',
+            'api.stripe.com': 'Stripe API',
+            'api.notion.com': 'Notion API',
             'api.github.com': 'GitHub API',
-            'api.stripe.com': 'Stripe',
             'api.telegram.org': 'Telegram Bot API',
             'discord.com': 'Discord API',
             'api.slack.com': 'Slack API',
-            'api.notion.com': 'Notion API',
-            'api.airtable.com': 'Airtable',
+            'api.airtable.com': 'Airtable API',
             'sheets.googleapis.com': 'Google Sheets API',
-            'www.googleapis.com': 'Google APIs',
+            'api.twitter.com': 'Twitter/X API',
+            'graph.facebook.com': 'Facebook Graph API',
+            'latenode.com': 'LateNode API',
         };
 
-        // Check known services
         for (const [pattern, name] of Object.entries(knownServices)) {
-            if (domain.includes(pattern) || domain === pattern) {
-                return { serviceName: name, domain, apiType: 'REST' };
+            if (domain.includes(pattern)) {
+                return { name, domain };
             }
         }
 
-        // For unknown services, ask Perplexity to identify
-        const identification = await this.queryPerplexity(`
-What API service is "${domain}"? Just respond with the service name and nothing else.
-If you don't know, respond with the domain cleaned up as a readable name.
-        `, true);
+        // Ask Perplexity for unknown domains
+        const identification = await this.queryPerplexity(
+            `ما هي خدمة API لـ "${domain}"؟ أجب باسم الخدمة فقط.`,
+            true
+        );
 
         return {
-            serviceName: identification.trim() || domain,
-            domain,
-            apiType: 'REST'
+            name: identification.trim() || domain,
+            domain
         };
     }
 
     /**
-     * Step 3: Deep research in service documentation
+     * Research API documentation for building a new node
      */
-    private async researchServiceDocs(
-        serviceName: string,
-        nodeContext: ReturnType<typeof this.extractNodeContext>,
-        error: string,
-        inputData?: unknown
-    ): Promise<{
-        documentation: string;
-        correctEndpoint: string;
-        correctAuth: string;
-        correctExample: string;
-    }> {
-        const researchQuery = `
-I need to fix an API integration with ${serviceName}.
+    private async researchApiDocumentation(
+        service: string,
+        endpoint: string,
+        action: string
+    ): Promise<string> {
+        const query = `
+ابحث في الوثائق الرسمية لـ ${service} عن:
 
-**Current Node Configuration:**
-${nodeContext.fullJson}
+Endpoint: ${endpoint}
+Action: ${action}
 
-**Error Message:**
-${error}
+أريد المعلومات التالية بالتفصيل:
+1. رابط الـ endpoint الكامل
+2. HTTP Method المطلوب
+3. Headers المطلوبة (خاصة Authorization و Content-Type)
+4. شكل الـ Body المطلوب (إذا كان POST/PUT)
+5. مثال cURL كامل يعمل
+6. رابط الوثائق الرسمية
 
-${inputData ? `**Input Data being sent:**\n${JSON.stringify(inputData, null, 2)}` : ''}
-
-Please search the official ${serviceName} API documentation and find:
-
-1. **Official Documentation URL** - Link to the exact endpoint documentation
-2. **Correct Endpoint Format** - The exact URL pattern required
-3. **Required Authentication** - Exact headers/tokens needed (e.g., "Authorization: Bearer TOKEN" or "X-API-Key: KEY")
-4. **Required Headers** - All mandatory headers (Content-Type, Accept, etc.)
-5. **Request Body Format** - Exact JSON structure required for this endpoint
-6. **Working cURL Example** - A complete working example
-
-Focus on finding the EXACT official documentation for ${serviceName}, not general advice.
+ركز على الوثائق الرسمية فقط، ليس مصادر خارجية.
         `;
 
-        const research = await this.queryPerplexity(researchQuery, false);
-
-        return {
-            documentation: research,
-            correctEndpoint: this.extractPattern(research, 'endpoint'),
-            correctAuth: this.extractPattern(research, 'auth'),
-            correctExample: this.extractPattern(research, 'curl')
-        };
+        return await this.queryPerplexity(query, false);
     }
 
     /**
-     * Helper to extract patterns from research
+     * Research for fixing an existing broken node
      */
-    private extractPattern(text: string, type: string): string {
-        // Simple extraction - the full context is in documentation
-        return text;
-    }
-
-    /**
-     * Step 4: Generate the fix based on research
-     */
-    private async generateFix(
+    private async researchForFix(
         serviceName: string,
-        nodeContext: ReturnType<typeof this.extractNodeContext>,
-        research: Awaited<ReturnType<typeof this.researchServiceDocs>>,
-        error: string
-    ): Promise<RepairSuggestion> {
-        const fixQuery = `
-Based on my research of ${serviceName} API documentation:
+        currentConfig: HttpNodeConfig,
+        errorMessage: string,
+        inputData?: unknown
+    ): Promise<string> {
+        const query = `
+أصلح هذا التكامل مع ${serviceName}:
 
-${research.documentation}
+**التكوين الحالي:**
+URL: ${currentConfig.url}
+Method: ${currentConfig.method}
+Headers: ${JSON.stringify(currentConfig.headers)}
+Body: ${JSON.stringify(currentConfig.body)}
+
+**رسالة الخطأ:**
+${errorMessage}
+
+${inputData ? `**البيانات المرسلة:**\n${JSON.stringify(inputData, null, 2)}` : ''}
+
+ابحث في وثائق ${serviceName} الرسمية وأعطني:
+1. ما الخطأ في التكوين الحالي
+2. التكوين الصحيح (URL, Headers, Body)
+3. مثال cURL يعمل
+        `;
+
+        return await this.queryPerplexity(query, false);
+    }
+
+    /**
+     * Generate node configuration from research
+     */
+    private async generateNodeConfig(
+        intent: { service: string; endpoint: string; action: string; details: string },
+        research: string
+    ): Promise<BuildResult> {
+        const prompt = `
+بناءً على البحث التالي:
+
+${research}
 
 ---
 
-**Current broken n8n HTTP Request node:**
-${nodeContext.fullJson}
+أنشئ تكوين n8n HTTP Request Node لـ: ${intent.service} - ${intent.action}
 
-**Error:** ${error}
-
----
-
-Generate a complete fix. Respond with ONLY valid JSON (no markdown, no explanation before/after):
-
+أجب بـ JSON فقط (بدون markdown):
 {
-    "summary": "One-line description of the fix",
-    "explanation": "Detailed explanation of what was wrong and what you changed",
-    "suggestedFix": {
-        "parameters": {
-            "url": "The corrected full URL",
-            "method": "GET/POST/PUT/DELETE",
-            "headers": {
-                "Authorization": "Bearer YOUR_TOKEN or correct auth format",
-                "Content-Type": "application/json or correct content type",
-                "ADD_ANY_OTHER_REQUIRED_HEADERS": "value"
-            },
-            "bodyParameters": "Correct body if needed (as object or string)"
-        }
+    "success": true,
+    "service": "${intent.service}",
+    "summary": "وصف قصير للـ node",
+    "explanation": "شرح مفصل لكيفية عمل الـ node",
+    "nodeConfig": {
+        "url": "الـ URL الكامل",
+        "method": "GET/POST/PUT/DELETE",
+        "headers": {
+            "Authorization": "Bearer YOUR_API_KEY",
+            "Content-Type": "application/json"
+        },
+        "body": {}
     },
+    "curlCommand": "مثال cURL كامل",
+    "documentationUrl": "رابط الوثائق",
+    "researchSteps": ["خطوة 1", "خطوة 2"],
     "confidence": "high"
 }
-
-IMPORTANT: 
-- Include ALL required headers from the documentation
-- Use the EXACT URL format from the docs
-- Include proper authentication format
         `;
 
-        const fixResponse = await this.queryPerplexity(fixQuery, true);
-
-        try {
-            // Extract JSON from response
-            const jsonMatch = fixResponse.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                const parsed = JSON.parse(jsonMatch[0]);
-                return {
-                    ...parsed,
-                    service: serviceName,
-                    documentation: research.documentation,
-                    researchSteps: [
-                        `Identified service: ${serviceName}`,
-                        `Searched official ${serviceName} documentation`,
-                        `Found endpoint specification and auth requirements`,
-                        `Generated corrected node parameters`
-                    ]
-                };
-            }
-        } catch (e) {
-            console.error('Failed to parse fix JSON:', e);
-        }
-
-        // Fallback if JSON parsing fails
-        return {
-            summary: `Fix for ${serviceName} API integration`,
-            explanation: fixResponse,
-            suggestedFix: {},
-            confidence: 'medium',
-            service: serviceName,
-            documentation: research.documentation,
-            researchSteps: [
-                `Identified service: ${serviceName}`,
-                `Researched ${serviceName} documentation`,
-                `Generated fix suggestions (manual review recommended)`
-            ]
-        };
-    }
-
-    /**
-     * Main repair function - orchestrates the 4-step process
-     */
-    async repairNode(node: NodeData, error: string, inputData?: unknown): Promise<RepairSuggestion> {
-        console.log(`[AI Repair] Starting repair for node: ${node.name}`);
-
-        // Step 1: Extract full node context
-        console.log('[AI Repair] Step 1: Extracting node context...');
-        const nodeContext = this.extractNodeContext(node);
-
-        // Step 2: Identify the service
-        console.log('[AI Repair] Step 2: Identifying service...');
-        const service = await this.identifyService(nodeContext.url || '');
-        console.log(`[AI Repair] Identified service: ${service.serviceName}`);
-
-        // Step 3: Deep research in docs
-        console.log(`[AI Repair] Step 3: Researching ${service.serviceName} documentation...`);
-        const research = await this.researchServiceDocs(
-            service.serviceName,
-            nodeContext,
-            error,
-            inputData
-        );
-
-        // Step 4: Generate the fix
-        console.log('[AI Repair] Step 4: Generating fix...');
-        const fix = await this.generateFix(
-            service.serviceName,
-            nodeContext,
-            research,
-            error
-        );
-
-        console.log('[AI Repair] Fix generated successfully');
-        return fix;
-    }
-
-    /**
-     * Improve node - similar multi-step approach
-     */
-    async improveNode(node: NodeData, inputData?: unknown, outputData?: unknown): Promise<ImproveSuggestion> {
-        const nodeContext = this.extractNodeContext(node);
-        const service = await this.identifyService(nodeContext.url || '');
-
-        const improveQuery = `
-Analyze this n8n ${service.serviceName} HTTP Request node and suggest improvements:
-
-**Full Node Configuration:**
-${nodeContext.fullJson}
-
-${inputData ? `**Sample Input:**\n${JSON.stringify(inputData, null, 2)}` : ''}
-${outputData ? `**Sample Output:**\n${JSON.stringify(outputData, null, 2)}` : ''}
-
-Search the ${service.serviceName} API documentation and suggest:
-1. Better endpoint alternatives (if any)
-2. Optimization opportunities
-3. Error handling improvements
-4. Rate limiting best practices
-5. Security improvements
-
-Respond with ONLY valid JSON:
-{
-    "summary": "One-line summary",
-    "improvements": [
-        {
-            "title": "Improvement title",
-            "description": "What to improve",
-            "implementation": "How to implement in n8n"
-        }
-    ],
-    "performance": "Performance tips",
-    "security": "Security recommendations"
-}
-        `;
-
-        const response = await this.queryPerplexity(improveQuery, false);
+        const response = await this.queryPerplexity(prompt, true);
 
         try {
             const jsonMatch = response.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 return JSON.parse(jsonMatch[0]);
             }
-        } catch {
-            // Fallback
+        } catch (e) {
+            console.error('[HTTP Agent] Failed to parse config:', e);
         }
 
         return {
-            summary: `Improvements for ${service.serviceName} integration`,
-            improvements: [{ title: 'Analysis', description: response }]
+            success: false,
+            service: intent.service,
+            summary: 'Failed to generate configuration',
+            explanation: response,
+            nodeConfig: {
+                url: '',
+                method: 'GET'
+            },
+            curlCommand: '',
+            researchSteps: ['Research completed but parsing failed'],
+            confidence: 'low'
         };
     }
 
     /**
-     * Query Perplexity API with sonar-reasoning-pro
+     * Generate fix for broken node
+     */
+    private async generateFix(
+        serviceName: string,
+        currentConfig: HttpNodeConfig,
+        research: string,
+        errorMessage: string
+    ): Promise<BuildResult> {
+        const prompt = `
+بناءً على البحث:
+${research}
+
+---
+
+أصلح تكوين n8n HTTP Request Node هذا:
+URL: ${currentConfig.url}
+Method: ${currentConfig.method}
+Error: ${errorMessage}
+
+أجب بـ JSON فقط:
+{
+    "success": true,
+    "service": "${serviceName}",
+    "summary": "ملخص الإصلاح",
+    "explanation": "ما كان الخطأ وكيف تم إصلاحه",
+    "nodeConfig": {
+        "url": "URL الصحيح",
+        "method": "GET/POST/PUT/DELETE",
+        "headers": { "كل الـ headers المطلوبة" },
+        "body": {}
+    },
+    "curlCommand": "cURL يعمل",
+    "researchSteps": ["تحديد الخدمة", "البحث في الوثائق", "توليد الإصلاح"],
+    "confidence": "high"
+}
+        `;
+
+        const response = await this.queryPerplexity(prompt, true);
+
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                const result = JSON.parse(jsonMatch[0]);
+                return {
+                    ...result,
+                    service: serviceName,
+                    researchSteps: [
+                        `تحديد الخدمة: ${serviceName}`,
+                        `تحليل الخطأ: ${errorMessage}`,
+                        'البحث في الوثائق الرسمية',
+                        'توليد التكوين الصحيح'
+                    ]
+                };
+            }
+        } catch (e) {
+            console.error('[HTTP Agent] Failed to parse fix:', e);
+        }
+
+        return {
+            success: false,
+            service: serviceName,
+            summary: `Fix attempt for ${serviceName}`,
+            explanation: research,
+            nodeConfig: currentConfig,
+            curlCommand: '',
+            researchSteps: ['Research completed but fix generation failed'],
+            confidence: 'low'
+        };
+    }
+
+    /**
+     * Extract node configuration from n8n node object
+     */
+    private extractNodeConfig(node: { parameters?: Record<string, unknown> }): HttpNodeConfig {
+        const params = node.parameters || {};
+
+        return {
+            url: (params.url as string) || '',
+            method: (params.method as HttpNodeConfig['method']) || 'GET',
+            headers: (params.headers as Record<string, string>) || {},
+            queryParameters: (params.queryParameters as Record<string, string>) || {},
+            body: params.body || params.bodyParameters || params.jsonBody,
+            authentication: {
+                type: (params.authentication as HttpNodeConfig['authentication'])?.type || 'none'
+            }
+        };
+    }
+
+    /**
+     * Query Perplexity API
      */
     private async queryPerplexity(query: string, preferSpeed: boolean = false): Promise<string> {
-        try {
-            const systemMessage = `أنت خبير متخصص في إصلاح تكاملات API داخل n8n workflows.
+        const systemMessage = `أنت خبير متخصص في APIs و n8n workflows.
 
 مهمتك:
-1. **تحديد الخدمة المستضافة**: استخرج اسم الخدمة من URL الموجود في نود HTTP Request
-2. **البحث في أحدث إصدار**: ابحث في الوثائق الرسمية عن أحدث إصدار من API لهذه الخدمة
-3. **عدم اقتراح بدائل**: لا تقترح أبداً خدمات أو أدوات بديلة - ركز فقط على إصلاح الخدمة الحالية
-4. **إصلاح جاهز للتطبيق**: قدم إصلاحاً يمكن تطبيقه مباشرة على n8n بضغطة زر واحدة
+1. البحث في الوثائق الرسمية للـ APIs
+2. توليد تكوينات n8n HTTP Request صحيحة
+3. تقديم أمثلة cURL تعمل
 
-قواعد صارمة:
-- إذا كان URL يشير إلى خدمة معينة ، ابحث فقط في وثائق تلك الخدمة
-- قدم الـ headers والـ authentication بالضبط كما هو مطلوب في الوثائق الرسمية
-- لا تقترح الانتقال لخدمة أخرى أو استخدام طريقة مختلفة
-- الإصلاح يجب أن يكون JSON صالح يمكن تطبيقه مباشرة على n8n node
+قواعد:
+- ابحث فقط في الوثائق الرسمية
+- لا تقترح بدائل - أصلح ما هو موجود
+- عند الرد بـ JSON، قدم JSON صالح فقط بدون markdown`;
 
-عند الرد بـ JSON، قدم JSON فقط بدون markdown code blocks.`;
-
+        try {
             const response = await axios.post(
                 'https://api.perplexity.ai/chat/completions',
                 {
                     model: 'sonar-reasoning-pro',
                     messages: [
-                        {
-                            role: 'system',
-                            content: systemMessage
-                        },
-                        {
-                            role: 'user',
-                            content: query
-                        }
+                        { role: 'system', content: systemMessage },
+                        { role: 'user', content: query }
                     ],
-                    max_tokens: 8000,
+                    max_tokens: preferSpeed ? 2000 : 8000,
                     temperature: 0.1,
                     search_recency_filter: 'week'
                 },
@@ -416,10 +553,11 @@ Respond with ONLY valid JSON:
 
             return response.data.choices[0]?.message?.content || 'No response from Perplexity';
         } catch (error: any) {
-            console.error('Perplexity API error:', error.response?.data || error.message);
+            console.error('[HTTP Agent] Perplexity error:', error.response?.data || error.message);
             throw new Error(`Perplexity API error: ${error.response?.data?.error?.message || error.message}`);
         }
     }
 }
 
-export default AIRepairService;
+export default HttpNodeBuilderAgent;
+
