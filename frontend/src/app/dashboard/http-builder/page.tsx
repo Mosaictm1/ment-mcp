@@ -141,7 +141,7 @@ export default function HttpBuilderPage() {
         setError('');
 
         try {
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem('accessToken');
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/http-builder/execute-and-analyze`, {
                 method: 'POST',
                 headers: {
@@ -174,7 +174,7 @@ export default function HttpBuilderPage() {
         setBuildResult(null);
 
         try {
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem('accessToken');
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/http-builder/fix`, {
                 method: 'POST',
                 headers: {
@@ -213,7 +213,7 @@ export default function HttpBuilderPage() {
         setError('');
 
         try {
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem('accessToken');
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/http-builder/build`, {
                 method: 'POST',
                 headers: {
@@ -245,7 +245,7 @@ export default function HttpBuilderPage() {
         if (!errorNode) return;
 
         try {
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem('accessToken');
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/http-builder/apply`, {
                 method: 'POST',
                 headers: {
