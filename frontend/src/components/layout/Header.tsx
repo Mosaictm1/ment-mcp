@@ -20,13 +20,9 @@ export default function Header() {
     return (
         <header
             className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled
-                ? 'glass border-b border-white/10 shadow-lg'
-                : 'bg-transparent border-b border-[var(--border-dark)]'
+                ? 'bg-[var(--bg-glass-strong)] border-b border-[var(--border-glass)] backdrop-blur-xl shadow-lg'
+                : 'bg-transparent border-b border-transparent'
                 }`}
-            style={{
-                backdropFilter: isScrolled ? 'blur(20px)' : 'blur(8px)',
-                WebkitBackdropFilter: isScrolled ? 'blur(20px)' : 'blur(8px)',
-            }}
         >
             <div className="container">
                 <nav className="flex items-center justify-between h-16 md:h-20">
@@ -36,10 +32,7 @@ export default function Header() {
                         className="flex items-center gap-3 group"
                     >
                         <div
-                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-110 bg-white/5"
-                            style={{
-                                boxShadow: '0 4px 12px rgba(87, 217, 87, 0.3)',
-                            }}
+                            className="w-10 h-10 rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-110 shadow-lg shadow-purple-500/20"
                         >
                             <Image
                                 src="/logo.jpg"
@@ -49,7 +42,7 @@ export default function Header() {
                                 className="w-full h-full object-cover"
                             />
                         </div>
-                        <span className="font-bold text-lg md:text-xl text-white transition-colors group-hover:text-[var(--primary-light)]">
+                        <span className="font-bold text-lg md:text-xl text-white transition-colors group-hover:text-[var(--primary)]">
                             Ment
                         </span>
                     </Link>
@@ -66,14 +59,11 @@ export default function Header() {
                                 key={index}
                                 href={link.href}
                                 target={link.external ? '_blank' : undefined}
-                                className="relative text-[var(--text-muted)] hover:text-white text-sm font-medium transition-colors group"
+                                className="relative text-[var(--text-secondary)] hover:text-white text-sm font-medium transition-colors group py-2"
                             >
                                 {link.label}
                                 <span
-                                    className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[var(--primary)] transition-all duration-300 group-hover:w-full"
-                                    style={{
-                                        boxShadow: '0 0 8px var(--primary)',
-                                    }}
+                                    className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] transition-all duration-300 group-hover:w-full rounded-full"
                                 />
                             </Link>
                         ))}
@@ -83,13 +73,13 @@ export default function Header() {
                     <div className="hidden md:flex items-center gap-3">
                         <Link
                             href="/login"
-                            className="text-[var(--text-muted)] hover:text-white text-sm font-medium transition-all px-4 py-2.5 rounded-lg hover:bg-white/5"
+                            className="text-[var(--text-secondary)] hover:text-white text-sm font-medium transition-all px-4 py-2.5 rounded-lg hover:bg-white/5"
                         >
                             Sign In
                         </Link>
                         <Link
                             href="/signup"
-                            className="btn btn-primary text-sm py-2.5 px-6"
+                            className="btn btn-primary text-sm py-2.5 px-6 rounded-lg font-semibold shadow-purple-500/20"
                         >
                             Get Started
                         </Link>
@@ -97,12 +87,12 @@ export default function Header() {
 
                     {/* Mobile Menu Button */}
                     <button
-                        className="md:hidden p-2.5 rounded-lg hover:bg-white/5 transition-all"
+                        className="md:hidden p-2.5 rounded-lg hover:bg-white/5 transition-all text-[var(--text-secondary)] hover:text-white"
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                         aria-label="Toggle menu"
                     >
                         <svg
-                            className="w-6 h-6 text-white transition-transform duration-300"
+                            className="w-6 h-6 transition-transform duration-300"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -124,7 +114,7 @@ export default function Header() {
                     className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                         }`}
                 >
-                    <div className="py-4 border-t border-white/10">
+                    <div className="py-4 border-t border-[var(--border-glass)]">
                         <div className="flex flex-col gap-1">
                             {[
                                 { href: '#features', label: 'Features' },
@@ -136,7 +126,7 @@ export default function Header() {
                                     key={index}
                                     href={link.href}
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="px-4 py-3 rounded-lg text-[var(--text-muted)] hover:bg-white/5 hover:text-white text-sm font-medium transition-all"
+                                    className="px-4 py-3 rounded-lg text-[var(--text-secondary)] hover:bg-white/5 hover:text-white text-sm font-medium transition-all"
                                     style={{
                                         animationDelay: `${index * 0.05}s`,
                                     }}
@@ -144,18 +134,18 @@ export default function Header() {
                                     {link.label}
                                 </Link>
                             ))}
-                            <hr className="my-2 border-white/10" />
+                            <hr className="my-2 border-[var(--border-glass)]" />
                             <Link
                                 href="/login"
                                 onClick={() => setIsMenuOpen(false)}
-                                className="px-4 py-3 rounded-lg text-[var(--text-muted)] hover:bg-white/5 hover:text-white text-sm font-medium transition-all"
+                                className="px-4 py-3 rounded-lg text-[var(--text-secondary)] hover:bg-white/5 hover:text-white text-sm font-medium transition-all"
                             >
                                 Sign In
                             </Link>
                             <Link
                                 href="/signup"
                                 onClick={() => setIsMenuOpen(false)}
-                                className="btn btn-primary mt-2 text-center text-sm"
+                                className="btn btn-primary mt-2 text-center text-sm mx-4 mb-2"
                             >
                                 Get Started
                             </Link>

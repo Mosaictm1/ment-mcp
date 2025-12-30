@@ -75,35 +75,30 @@ export default function Sidebar() {
 
     return (
         <aside
-            className="w-64 min-h-screen flex flex-col sticky top-0"
+            className="w-64 min-h-screen flex flex-col sticky top-0 border-r border-[var(--border-glass)] transition-all duration-300"
             style={{
-                background: 'linear-gradient(180deg, #0d0d14 0%, #0a0a0f 100%)',
-                borderRight: '1px solid rgba(255, 255, 255, 0.03)',
+                background: 'var(--bg-card)',
+                backdropFilter: 'blur(20px)'
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
             {/* Logo */}
-            <div className="px-5 py-5 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.03)' }}>
-                <Link href="/" className="flex items-center gap-2.5 group">
-                    <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
-                        style={{
-                            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                        }}
-                    >
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="px-5 py-6 border-b border-[var(--border-glass)]">
+                <Link href="/" className="flex items-center gap-3 group">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] shadow-lg shadow-purple-500/20 transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                     </div>
-                    <span className="text-lg font-semibold text-white">
-                        Ment<span style={{ color: '#22c55e' }}>MCP</span>
+                    <span className="text-xl font-bold text-white tracking-tight">
+                        Ment<span className="text-[var(--secondary)]">MCP</span>
                     </span>
                 </Link>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-3 py-4">
+            <nav className="flex-1 px-4 py-6">
                 <div className="space-y-1">
                     {navItems.map((item) => {
                         const active = isActive(item.href);
@@ -111,32 +106,23 @@ export default function Sidebar() {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 ${active
-                                    ? 'text-white'
-                                    : 'text-white/40 hover:text-white/70 hover:bg-white/[0.03]'
+                                className={`relative flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group overflow-hidden ${active
+                                    ? 'text-white bg-white/5 shadow-md shadow-purple-500/5'
+                                    : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 {active && (
-                                    <div
-                                        className="absolute inset-0 rounded-lg"
-                                        style={{
-                                            background: 'linear-gradient(90deg, rgba(34, 197, 94, 0.08) 0%, transparent 100%)',
-                                        }}
-                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--primary)]/10 to-transparent opacity-50" />
                                 )}
-                                {active && (
-                                    <div
-                                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r"
-                                        style={{
-                                            background: '#22c55e',
-                                            boxShadow: '0 0 8px rgba(34, 197, 94, 0.4)',
-                                        }}
-                                    />
-                                )}
-                                <span className={`relative ${active ? 'text-[#22c55e]' : ''}`}>
+
+                                <span className={`relative transition-colors duration-200 ${active ? 'text-[var(--priority)]' : 'group-hover:text-white'}`}>
                                     {item.icon}
                                 </span>
-                                <span className="relative text-sm font-medium">{item.label}</span>
+                                <span className="relative font-medium text-sm tracking-wide">{item.label}</span>
+
+                                {active && (
+                                    <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-[var(--secondary)] shadow-[0_0_10px_var(--secondary)] animate-pulse" />
+                                )}
                             </Link>
                         );
                     })}
@@ -144,22 +130,16 @@ export default function Sidebar() {
             </nav>
 
             {/* User */}
-            <div className="px-3 py-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.03)' }}>
-                <div className="flex items-center gap-3 px-3 py-2">
-                    <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-                        style={{
-                            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                            color: '#0a0a0f',
-                        }}
-                    >
+            <div className="px-4 py-4 border-t border-[var(--border-glass)] bg-[var(--bg-deep)]/50">
+                <div className="flex items-center gap-3 px-2 py-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold bg-gradient-to-br from-[var(--secondary)] to-[var(--primary)] text-white shadow-lg">
                         {getInitials()}
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">
                             {user?.name || 'User'}
                         </p>
-                        <p className="text-xs text-white/30 truncate">
+                        <p className="text-xs text-[var(--text-muted)] truncate">
                             {user?.email}
                         </p>
                     </div>
@@ -167,7 +147,7 @@ export default function Sidebar() {
 
                 <button
                     onClick={logout}
-                    className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white/40 hover:text-red-400 hover:bg-red-500/5 transition-all duration-150"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group"
                 >
                     <LogoutIcon />
                     <span>Sign Out</span>
